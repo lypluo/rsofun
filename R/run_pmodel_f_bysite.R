@@ -19,12 +19,19 @@ run_pmodel_f_bysite <- function( sitename, params_siml, siteinfo, forcing, df_so
   
   ## record first year and number of years in forcing data frame (may need to overwrite later)
   ndayyear <- 365
-  firstyeartrend_forcing <- forcing %>% slice(1) %>% pull(date) %>% lubridate::year()
-  nyeartrend_forcing <- nrow(forcing)/ndayyear
 
   ## determine number of seconds per time step
-  times <- forcing %>% pull(date) %>% head(2)
-  secs_per_tstep <- difftime(times[1], times[2], units = "secs") %>% as.integer() %>% abs()
+  two_times <- forcing %>% pull(date) %>% head(2)
+  secs_per_tstep <- difftime(two_times[1], two_times[2], units = "secs") %>% as.integer() %>% abs()
+
+  hours_per_tstep <- secs_per_tstep / 3600
+  steps_per_day = as.integer(24.0 / hours_per_tstep)
+  ntstepsyear = steps_per_day * 365
+  # dt_fast_yr = 1.0/(365.0 * steps_per_day)
+  # step_seconds = 24.0 * 3600.0 / steps_per_day
+
+  firstyeartrend_forcing <- forcing %>% slice(1) %>% pull(date) %>% lubridate::year()
+  nyeartrend_forcing <- nrow(forcing)/ndayyear
   
   ## re-define units and naming of forcing dataframe
   forcing <- forcing %>% 
@@ -80,14 +87,14 @@ run_pmodel_f_bysite <- function( sitename, params_siml, siteinfo, forcing, df_so
       do_continue <- FALSE
     }
     
-    if (nrow(forcing) != params_siml$nyeartrend * ndayyear){
+    if (nrow(forcing) != params_siml$nyeartrend * ntstepsyear){
       ## Dates in 'forcing' do not correspond to simulation parameters
       rlang::warn("Error: Number of years data in forcing does not correspond to number of simulation years (nyeartrend).\n")
-      rlang::warn(paste(" Number of years data: ", nrow(forcing)/ndayyear), "\n")
+      rlang::warn(paste(" Number of years data: ", nrow(forcing)/ntstepsyear), "\n")
       rlang::warn(paste(" Number of simulation years: ", params_siml$nyeartrend, "\n"))
       rlang::warn(paste(" Site name: ", sitename, "\n"))
       
-      if (nrow(forcing) %% ndayyear == 0){
+      if (nrow(forcing) %% ntstepsyear == 0){
         ## Overwrite params_siml$nyeartrend and params_siml$firstyeartrend based on 'forcing'
         params_siml$nyeartrend <- nyeartrend_forcing
         params_siml$firstyeartrend <- firstyeartrend_forcing
