@@ -220,10 +220,20 @@ contains
       ! This still does a linear scaling of daily GPP - knowingly wrong
       ! but not too dangerous...
       !----------------------------------------------------------------
-      tile_fluxes(lu)%plant(pft)%dgpp = tile(lu)%plant(pft)%fpc_grid * tile(lu)%canopy%fapar * climate%dppfd * myinterface%params_siml%secs_per_tstep * out_pmodel%lue * soilmstress
+      tile_fluxes(lu)%plant(pft)%dgpp = tile(lu)%plant(pft)%fpc_grid * tile(lu)%canopy%fapar * climate%dppfd * real(myinterface%params_siml%secs_per_tstep) * out_pmodel%lue * soilmstress
       ! if (out_pmodel%lue > 0.0) then
-      !   print*,'tile(lu)%plant(pft)%fpc_grid, tile(lu)%canopy%fapar, climate%dppfd, out_pmodel%lue, soilmstress, myinterface%params_siml%secs_per_tstep', tile(lu)%plant(pft)%fpc_grid, tile(lu)%canopy%fapar, climate%dppfd, out_pmodel%lue, soilmstress, myinterface%params_siml%secs_per_tstep
+      !   print*,'tile(lu)%plant(pft)%fpc_grid, tile(lu)%canopy%fapar, climate%dppfd, out_pmodel%lue, soilmstress, real(myinterface%params_siml%secs_per_tstep)', tile(lu)%plant(pft)%fpc_grid, tile(lu)%canopy%fapar, climate%dppfd, out_pmodel%lue, soilmstress, real(myinterface%params_siml%secs_per_tstep)
       ! end if
+
+      print*,'secs_per_tstep ', real(myinterface%params_siml%secs_per_tstep)
+      print*,'dgpp ', tile_fluxes(lu)%plant(pft)%dgpp
+
+      print*,'soilmstress', soilmstress
+      print*,'out_pmodel%lue', out_pmodel%lue
+      print*,'real(myinterface%params_siml%secs_per_tstep)', real(myinterface%params_siml%secs_per_tstep)
+      print*,'climate%dppfd', climate%dppfd
+      print*,'tile(lu)%canopy%fapar', tile(lu)%canopy%fapar
+      print*,'tile(lu)%plant(pft)%fpc_grid', tile(lu)%plant(pft)%fpc_grid
 
       !----------------------------------------------------------------
       ! Dark respiration
@@ -567,7 +577,7 @@ contains
   !       if (grid%dayl==0.0) then
   !         climate_acclimation%dppfd = 0.0
   !       else  
-  !         climate_acclimation%dppfd = climate%dppfd * myinterface%params_siml%secs_per_tstep / grid%dayl
+  !         climate_acclimation%dppfd = climate%dppfd * real(myinterface%params_siml%secs_per_tstep) / grid%dayl
   !       end if
 
   !       !climate_acclimation%dppfd = climate%dppfd * interface%params_siml%secs_per_tstep / grid%dayl

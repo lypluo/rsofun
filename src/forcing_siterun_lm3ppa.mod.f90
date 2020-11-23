@@ -65,8 +65,8 @@ contains
     idx_end   = idx_start + ntstepsyear - 1
 
     ! This is to read from ORNL file
-    out_climate%year      = int(forcing(idx_start:idx_end, 1))                    ! Year
-    out_climate%doy       = int(forcing(idx_start:idx_end, 2))                    ! day of the year
+    out_climate%year      = int(forcing(idx_start:idx_end,  1))                   ! Year
+    out_climate%doy       = int(forcing(idx_start:idx_end,  2))                   ! day of the year
     out_climate%hod       = real(forcing(idx_start:idx_end, 3))                   ! hour of the day
     out_climate%PAR       = real(forcing(idx_start:idx_end, 4))                   ! umol/m2/s  (*2)         
     out_climate%radiation = real(forcing(idx_start:idx_end, 5))                   ! W/m2

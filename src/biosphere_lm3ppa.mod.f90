@@ -16,7 +16,7 @@ module md_biosphere_lm3ppa
 
 contains
 
-  subroutine biosphere_annual(out_biosphere)
+  subroutine biosphere_annual( out_biosphere )
     !////////////////////////////////////////////////////////////////
     ! function BIOSPHERE_annual calculates net ecosystem exchange (nee)
     ! in response to environmental boundary conditions (atmospheric 
@@ -25,9 +25,10 @@ contains
     ! Copyright (C) 2015, see LICENSE, Benjamin David Stocker
     ! contact: b.stocker@imperial.ac.uk
     !----------------------------------------------------------------
-    use md_interface_lm3ppa, only: myinterface, outtype_biosphere  
-    ! return variable
-    type(outtype_biosphere) :: out_biosphere
+    use md_interface_lm3ppa, only: myinterface, outtype_biosphere
+
+    ! arguments
+    type(outtype_biosphere), intent(out) :: out_biosphere
 
     ! ! local variables
     integer :: dm, moy, doy

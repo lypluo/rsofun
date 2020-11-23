@@ -21,8 +21,15 @@ module md_params_siml_pmodel
     integer :: recycle         ! length of standard recycling period
     integer :: outdt           ! output periodicity
     integer :: outnt           ! number of output time steps per year
-    integer :: secs_per_tstep  ! number of seconds per time step (now daily => 60 * 60 * 24)
     
+    ! time stepping parameters
+    real    :: timestep         ! time step length (h)
+    real    :: timestep_d       ! time step length (d)
+    integer :: steps_per_day    ! number of time steps per day
+    real    :: dt_fast_yr       ! time step length as a fraction of one year
+    integer :: ntstepsyear      ! number of time steps per year
+    integer :: secs_per_tstep   ! number of seconds per time step (now daily => 60 * 60 * 24)
+
     logical :: do_spinup            ! whether this simulation does spinup 
     logical :: is_calib             ! whether this simulation is a calibration simulation (overriding parameters and no output)
 

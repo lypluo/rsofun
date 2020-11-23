@@ -129,8 +129,8 @@ contains
       ! Update soil moisture and snow pack
       !---------------------------------------------------------
       out_snow_rain = get_snow_rain( &
-        climate%dprec * myinterface%params_siml%secs_per_tstep + tile_fluxes(lu)%canopy%dcn, &
-        climate%dsnow * myinterface%params_siml%secs_per_tstep, &
+        climate%dprec * real(myinterface%params_siml%secs_per_tstep) + tile_fluxes(lu)%canopy%dcn, &
+        climate%dsnow * real(myinterface%params_siml%secs_per_tstep), &
         climate%dtemp, &
         tile(lu)%soil%phy%snow &
         )

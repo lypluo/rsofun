@@ -30,7 +30,7 @@ run_lm3ppa_f_bysite <- function( sitename, params_siml, siteinfo, forcing, param
   n_daily  <- params_siml$nyeartrend * 365
 
   # Types of photosynthesis model
-    if (params_siml$method_photosynth == "gs_leuning"){
+  if (params_siml$method_photosynth == "gs_leuning"){
     code_method_photosynth = 1
   } else if (params_siml$method_photosynth == "pmodel"){
     code_method_photosynth = 2
@@ -41,8 +41,8 @@ run_lm3ppa_f_bysite <- function( sitename, params_siml, siteinfo, forcing, param
     rlang::abort(paste("run_lm3ppa_f_bysite: params_siml$method_photosynth not recognised:", params_siml$method_photosynth))
   }
 
-# Types of mortality formulations
-    if (params_siml$method_mortality == "cstarvation"){
+  # Types of mortality formulations
+  if (params_siml$method_mortality == "cstarvation"){
     code_method_mortality = 1
   } else if (params_siml$method_mortality == "growthrate"){
     code_method_mortality = 2

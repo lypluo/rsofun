@@ -80,13 +80,13 @@ contains
     real(kind=c_double),  intent(in) :: altitude
     real(kind=c_double),  intent(in) :: whc
     real(kind=c_double),  dimension(4,nlayers_soil), intent(in) :: soiltexture   ! soil texture (rows: sand, clay, organic, gravel; columns: layers from top)
-    integer(kind=c_int),  intent(in) :: nt ! number of time steps
+    integer(kind=c_int),  intent(in) :: nt  ! total number of time steps in simulation
     real(kind=c_double),  dimension(6), intent(in) :: par  ! free (calibratable) model parameters
-    real(kind=c_double),  dimension(nt,13), intent(in) :: forcing  ! array containing all temporally varying forcing data (rows: time steps; columns: 1=air temperature, 2=rainfall, 3=vpd, 4=ppfd, 5=net radiation, 6=sunshine fraction, 7=snowfall, 8=co2, 9=N-deposition, 10=fapar) 
+    real(kind=c_double),  dimension(nt,14), intent(in) :: forcing  ! array containing all temporally varying forcing data (rows: time steps; columns: see run_pmodel_f_bysite.R) 
     real(kind=c_double),  dimension(nt,5), intent(out) :: output
 
     ! local variables
-    type(outtype_biosphere) :: out_biosphere  ! holds all the output used for calculating the cost or maximum likelihood function 
+    type(outtype_biosphere), dimension(:), allocatable :: out_biosphere  ! holds all the output used for calculating the cost or maximum likelihood function 
     integer :: npft_local, yr, idx_start, idx_end
 
     !----------------------------------------------------------------
@@ -118,7 +118,7 @@ contains
     myinterface%params_siml%lgr3               = lgr3
     myinterface%params_siml%lgn3               = lgn3
     myinterface%params_siml%lgr4               = lgr4
-    myinterface%params_siml%secs_per_tstep     = secs_per_tstep
+    ! myinterface%params_siml%secs_per_tstep     = secs_per_tstep
 
     ! Count PFTs to be simulated
     npft_local = 0
@@ -132,6 +132,25 @@ contains
 
     ! set parameter to define that this is not a calibration run (otherwise sofun.f90 would not have been compiled, but sofun_simsuite.f90)
     myinterface%params_siml%is_calib = .true.  ! treat paramters passed through R/C-interface the same way as calibratable parameters
+
+    !----------------------------------------------------------------
+    ! INTERPRET FORCING FOR TIME STEPPING
+    !----------------------------------------------------------------
+    myinterface%params_siml%timestep   = real(forcing(2,3)) - real(forcing(1,3))             ! time step length (h), this takes the hour of day (a numeric) from the forcing file
+    myinterface%params_siml%timestep_d = real(forcing(2,2)) - real(forcing(1,2))             ! time step length (d), this takes the day of year (a numeric) from the forcing file
+    if (myinterface%params_siml%timestep==0.0 .and. myinterface%params_siml%timestep_d==1.0) then
+      ! forcing is daily
+      myinterface%params_siml%timestep = 24.0
+    end if
+    myinterface%params_siml%steps_per_day  = int(24.0/myinterface%params_siml%timestep)          ! number of time steps by day
+    myinterface%params_siml%dt_fast_yr     = 1.0 / (365.0 * myinterface%params_siml%steps_per_day) ! time step length as a fraction of one year
+    myinterface%params_siml%secs_per_tstep = int(24.0 * 3600.0 / myinterface%params_siml%steps_per_day)   ! seconds_per_year * dt_fast_yr
+    myinterface%params_siml%ntstepsyear    = myinterface%params_siml%steps_per_day * 365         ! number of time steps per year
+
+    ! forcing variables in myinterface cover all time steps of one year
+    allocate(myinterface%climate(myinterface%params_siml%ntstepsyear))
+    allocate(myinterface%vegcover(myinterface%params_siml%ntstepsyear))
+    allocate(out_biosphere(myinterface%params_siml%ntstepsyear))
 
     !----------------------------------------------------------------
     ! GET GRID INFORMATION
@@ -181,29 +200,32 @@ contains
                                           myinterface%steering%climateyear_idx, &
                                           myinterface%params_siml%in_ppfd,  &
                                           myinterface%params_siml%in_netrad, &
-                                          myinterface%grid%elv &
+                                          myinterface%grid%elv, &
+                                          myinterface%params_siml%ntstepsyear &
                                           )
 
       ! Get annual, gobally uniform CO2
       myinterface%pco2 = getco2(  nt, &
                                   forcing, &
                                   myinterface%steering%forcingyear, &
-                                  myinterface%params_siml%firstyeartrend &
+                                  myinterface%params_siml%firstyeartrend, &
+                                  myinterface%params_siml%ntstepsyear &
                                   )
 
       !----------------------------------------------------------------
       ! Get prescribed fAPAR if required (otherwise set to dummy value)
       !----------------------------------------------------------------
       myinterface%vegcover(:) = getfapar( &
-                                        nt, &
-                                        forcing, &
-                                        myinterface%steering%forcingyear_idx &
-                                        )
+                                          nt, &
+                                          forcing, &
+                                          myinterface%steering%forcingyear_idx, &
+                                          myinterface%params_siml%ntstepsyear &
+                                          )
 
       !----------------------------------------------------------------
       ! Call biosphere (wrapper for all modules, contains gridcell loop)
       !----------------------------------------------------------------
-      out_biosphere = biosphere_annual() 
+      call biosphere_annual( out_biosphere(:) )
       !----------------------------------------------------------------
 
       !----------------------------------------------------------------
@@ -214,11 +236,11 @@ contains
         idx_start = (myinterface%steering%forcingyear_idx - 1) * ndayyear + 1
         idx_end   = idx_start + ndayyear - 1
 
-        output(idx_start:idx_end,1) = dble(out_biosphere%fapar(:))  
-        output(idx_start:idx_end,2) = dble(out_biosphere%gpp(:))    
-        output(idx_start:idx_end,3) = dble(out_biosphere%transp(:)) 
-        output(idx_start:idx_end,4) = dble(out_biosphere%latenth(:))
-        output(idx_start:idx_end,5) = dble(out_biosphere%pet(:))
+        output(idx_start:idx_end,1) = dble(out_biosphere(:)%fapar)  
+        output(idx_start:idx_end,2) = dble(out_biosphere(:)%gpp)    
+        output(idx_start:idx_end,3) = dble(out_biosphere(:)%transp) 
+        output(idx_start:idx_end,4) = dble(out_biosphere(:)%latenth)
+        output(idx_start:idx_end,5) = dble(out_biosphere(:)%pet)
 
       end if
 
@@ -456,7 +478,8 @@ contains
 
     ! local variables
     type(outtype_biosphere) :: out_biosphere  ! holds all the output used for calculating the cost or maximum likelihood function 
-    real                    :: timestep, timestep_d
+    real                    :: timestep       ! time step length (h)
+    real                    :: timestep_d     ! time step length (d)
     integer                 :: yr
     
     integer :: idx
@@ -570,7 +593,6 @@ contains
     myinterface%params_soil%alphaSoil(:)         = real(params_soil(:,7))
     myinterface%params_soil%heat_capacity_dry(:) = real(params_soil(:,8))
 
-
     !----------------------------------------------------------------
     ! INTERPRET FORCING
     !----------------------------------------------------------------
@@ -591,6 +613,9 @@ contains
 
 
     yearloop: do yr=1, myinterface%params_siml%runyears
+
+      ! xxx check if forcing year is the same as in params_siml
+
       !----------------------------------------------------------------
       ! Define simulations "steering" variables (forcingyear, etc.)
       !----------------------------------------------------------------

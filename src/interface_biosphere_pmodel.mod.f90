@@ -25,18 +25,18 @@ module md_interface_pmodel
 
 
   type interfacetype_biosphere
-    integer                                 :: year
-    real                                    :: pco2
-    type(gridtype)                          :: grid
-    real, dimension(4,nlayers_soil)         :: soiltexture   ! soil texture (rows: sand, clay, organic, gravel; columns: layers from top)
-    real                                    :: whc_prescr
-    type(climate_type), dimension(ndayyear) :: climate
-    type(vegcover_type), dimension(ndayyear):: vegcover
-    ! type(domaininfo_type)                 :: domaininfo
-    type(outtype_steering)                  :: steering
-    type(paramstype_siml)                   :: params_siml
-    real, dimension(npft)                   :: fpc_grid        ! allocatable because we don't know number of PFTs a priori
-    type(paramstype_calib)                  :: params_calib    ! calibratable parameters
+    integer                                        :: year
+    real                                           :: pco2
+    type(gridtype)                                 :: grid
+    real, dimension(4,nlayers_soil)                :: soiltexture   ! soil texture (rows: sand, clay, organic, gravel; columns: layers from top)
+    real                                           :: whc_prescr
+    type(climate_type), dimension(:), allocatable  :: climate
+    type(vegcover_type), dimension(:), allocatable :: vegcover
+    ! type(domaininfo_type)                        :: domaininfo
+    type(outtype_steering)                         :: steering
+    type(paramstype_siml)                          :: params_siml
+    real, dimension(npft)                          :: fpc_grid        ! allocatable because we don't know number of PFTs a priori
+    type(paramstype_calib)                         :: params_calib    ! calibratable parameters
   end type interfacetype_biosphere
 
   type(interfacetype_biosphere) :: myinterface
@@ -47,11 +47,11 @@ module md_interface_pmodel
   ! This is the derived type-return variable of the function biosphere(),
   ! holding variables used for the cost function in sofun_calib.f90
   type outtype_biosphere
-    real, dimension(ndayyear) :: gpp
-    real, dimension(ndayyear) :: fapar
-    real, dimension(ndayyear) :: transp
-    real, dimension(ndayyear) :: latenth
-    real, dimension(ndayyear) :: pet
+    real :: gpp
+    real :: fapar
+    real :: transp
+    real :: latenth
+    real :: pet
   end type outtype_biosphere
 
 end module md_interface_pmodel

@@ -50,7 +50,7 @@ module md_forcing_pmodel
 
 contains
 
-  function getclimate( nt, forcing, init, climateyear_idx, in_ppfd, in_netrad, elv ) result ( out_climate )
+  function getclimate( nt, forcing, init, climateyear_idx, in_ppfd, in_netrad, elv, ntstepsyear ) result ( out_climate )
   ! function getclimate( nt, forcing, climateyear_idx, in_ppfd, in_netrad ) result ( out_climate )
     !////////////////////////////////////////////////////////////////
     ! This function invokes file format specific "sub-functions/routines"
@@ -66,16 +66,17 @@ contains
     logical, intent(in) :: in_ppfd
     logical, intent(in) :: in_netrad
     real, intent(in) :: elv
+    integer, intent(in) :: ntstepsyear
 
     ! local variables
     integer :: idx_start, idx_end
     integer, dimension(2) :: shape_forcing
 
     ! function return variable
-    type( climate_type ), dimension(ndayyear) :: out_climate
+    type( climate_type ), dimension(ntstepsyear) :: out_climate
 
-    idx_start = (climateyear_idx - 1) * ndayyear + 1
-    idx_end   = idx_start + ndayyear - 1
+    idx_start = (climateyear_idx - 1) * ntstepsyear + 1
+    idx_end   = idx_start + ntstepsyear - 1
     
     ! Test if forcing dimensions are correct
     shape_forcing = shape(forcing)
@@ -84,34 +85,33 @@ contains
     end if
 
     ! warning: column indices in forcing array are hard coded
-    out_climate(:)%dtemp   = real(forcing(idx_start:idx_end, 1))
-    out_climate(:)%dprec   = real(forcing(idx_start:idx_end, 2))
-    out_climate(:)%dvpd    = real(forcing(idx_start:idx_end, 3))
-    out_climate(:)%dpatm   = real(forcing(idx_start:idx_end, 11))
+    out_climate(:)%dtemp   = real(forcing(idx_start:idx_end, 4))
+    out_climate(:)%dprec   = real(forcing(idx_start:idx_end, 5))
+    out_climate(:)%dvpd    = real(forcing(idx_start:idx_end, 6))
 
     if (in_ppfd) then
-      out_climate(:)%dppfd = real(forcing(idx_start:idx_end, 4))
+      out_climate(:)%dppfd = real(forcing(idx_start:idx_end, 7))
     else
       out_climate(:)%dppfd = dummy
     end if
     if (in_netrad) then
-      out_climate(:)%dnetrad = real(forcing(idx_start:idx_end, 5))
+      out_climate(:)%dnetrad = real(forcing(idx_start:idx_end, 8))
     else
       out_climate(:)%dnetrad = dummy
     end if
     if ( in_netrad .and. in_ppfd ) then
       out_climate(:)%dfsun = dummy
     else
-      out_climate(:)%dfsun = real(forcing(idx_start:idx_end, 6))
+      out_climate(:)%dfsun = real(forcing(idx_start:idx_end, 9))
     end if
-    out_climate(:)%dsnow   = real(forcing(idx_start:idx_end, 7))
+    out_climate(:)%dsnow   = real(forcing(idx_start:idx_end, 10))
 
-    out_climate(:)%dpatm   = calc_patm( elv )    ! todo: use daily varying patm read from forcing
+    out_climate(:)%dpatm   = real(forcing(idx_start:idx_end, 14))
 
   end function getclimate
 
 
-  function getco2( nt, forcing, forcingyear, firstyeartrend ) result( pco2 )
+  function getco2( nt, forcing, forcingyear, firstyeartrend, ntstepsyear ) result( pco2 )
     !////////////////////////////////////////////////////////////////
     !  Function reads this year's atmospheric CO2 from input
     !----------------------------------------------------------------
@@ -120,6 +120,7 @@ contains
     real(kind=dp),  dimension(nt,11), intent(in)  :: forcing  ! array containing all temporally varying forcing data (rows: time steps; columns: 1=air temperature, 2=rainfall, 3=vpd, 4=ppfd, 5=net radiation, 6=sunshine fraction, 7=snowfall, 8=co2, 9=N-deposition) 
     integer, intent(in) :: forcingyear
     integer, intent(in) :: firstyeartrend
+    integer, intent(in) :: ntstepsyear
 
     ! function return variable
     real :: pco2
@@ -130,15 +131,15 @@ contains
 
     readyear_idx = forcingyear - firstyeartrend + 1
 
-    idx_start = (readyear_idx - 1) * ndayyear + 1
-    idx_end   = idx_start + ndayyear - 1
+    idx_start = (readyear_idx - 1) * ntstepsyear + 1
+    idx_end   = idx_start + ntstepsyear - 1
 
-    pco2 = sum(real(forcing(idx_start:idx_end, 8)))/ndayyear
+    pco2 = sum(real(forcing(idx_start:idx_end, 8)))/ntstepsyear
 
   end function getco2
 
 
-  function getfapar( nt, forcing, forcingyear_idx ) result( out_vegcover )
+  function getfapar( nt, forcing, forcingyear_idx, ntstepsyear ) result( out_vegcover )
     !////////////////////////////////////////////////////////////////
     ! Function reads this year's atmospheric CO2 from input
     !----------------------------------------------------------------
@@ -146,17 +147,18 @@ contains
     integer,  intent(in) :: nt ! number of time steps
     real(kind=dp),  dimension(nt,11), intent(in)  :: forcing  ! array containing all temporally varying forcing data (rows: time steps; columns: 1=air temperature, 2=rainfall, 3=vpd, 4=ppfd, 5=net radiation, 6=sunshine fraction, 7=snowfall, 8=co2, 9=N-deposition) 
     integer, intent(in) :: forcingyear_idx
+    integer, intent(in) :: ntstepsyear
 
     ! function return variable
-    type( vegcover_type ), dimension(ndayyear) :: out_vegcover
+    type( vegcover_type ), dimension(ntstepsyear) :: out_vegcover
 
     ! local variables 
     integer :: idx_start, idx_end
 
-    idx_start = (forcingyear_idx - 1) * ndayyear + 1
-    idx_end   = idx_start + ndayyear - 1
+    idx_start = (forcingyear_idx - 1) * ntstepsyear + 1
+    idx_end   = idx_start + ntstepsyear - 1
 
-    out_vegcover(:)%dfapar = real(forcing(idx_start:idx_end, 10))
+    out_vegcover(:)%dfapar = real(forcing(idx_start:idx_end, 13))
 
     ! ! "Correct" fAPAR
     ! print*,"WARNING: normalising fAPAR to within 0.12 and 1.0."

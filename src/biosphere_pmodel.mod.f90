@@ -27,7 +27,7 @@ module md_biosphere_pmodel
 
 contains
 
-  function biosphere_annual() result( out_biosphere )
+  subroutine biosphere_annual( out_biosphere )
     !////////////////////////////////////////////////////////////////
     ! function BIOSPHERE_annual calculates net ecosystem exchange (nee)
     ! in response to environmental boundary conditions (atmospheric 
@@ -39,8 +39,8 @@ contains
     use md_interface_pmodel, only: myinterface, outtype_biosphere
     use md_sofunutils, only: daily2monthly
   
-    ! return variable
-    type(outtype_biosphere) :: out_biosphere
+    ! arguments
+    type(outtype_biosphere), dimension(myinterface%params_siml%ntstepsyear), intent(out) :: out_biosphere
 
     ! local variables
     integer :: dm, moy, doy
@@ -180,11 +180,11 @@ contains
         ! populate function return variable
         !----------------------------------------------------------------
         !if (npft>1) stop 'think about npft > 1'
-        out_biosphere%fapar(doy)   = tile(1)%canopy%fapar
-        out_biosphere%gpp(doy)     = tile_fluxes(1)%canopy%dgpp
-        out_biosphere%transp(doy)  = tile_fluxes(1)%canopy%daet
-        out_biosphere%latenth(doy) = tile_fluxes(1)%canopy%daet_e
-        out_biosphere%pet(doy)     = tile_fluxes(1)%canopy%dpet
+        out_biosphere(doy)%fapar   = tile(1)%canopy%fapar
+        out_biosphere(doy)%gpp     = tile_fluxes(1)%canopy%dgpp
+        out_biosphere(doy)%transp  = tile_fluxes(1)%canopy%daet
+        out_biosphere(doy)%latenth = tile_fluxes(1)%canopy%daet_e
+        out_biosphere(doy)%pet     = tile_fluxes(1)%canopy%dpet
 
         init_daily = .false.
 
@@ -200,6 +200,6 @@ contains
 
     if (verbose) print*,'Done with biosphere for this year. Guete Rutsch!'
 
-  end function biosphere_annual
+  end subroutine biosphere_annual
 
 end module md_biosphere_pmodel
