@@ -52,6 +52,11 @@ module md_interface_pmodel
     real :: transp
     real :: latenth
     real :: pet
+    real :: vcmax
+    real :: jmax
+    real :: vcmax25
+    real :: jmax25
+    real :: gs_accl
   end type outtype_biosphere
 
 end module md_interface_pmodel

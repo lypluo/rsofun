@@ -185,6 +185,11 @@ contains
         out_biosphere(doy)%transp  = tile_fluxes(1)%canopy%daet
         out_biosphere(doy)%latenth = tile_fluxes(1)%canopy%daet_e
         out_biosphere(doy)%pet     = tile_fluxes(1)%canopy%dpet
+        out_biosphere(doy)%vcmax   = tile_fluxes(1)%canopy%vcmax
+        out_biosphere(doy)%jmax    = tile_fluxes(1)%canopy%jmax
+        out_biosphere(doy)%vcmax25 = tile_fluxes(1)%canopy%vcmax25
+        out_biosphere(doy)%jmax25  = tile_fluxes(1)%canopy%jmax25
+        out_biosphere(doy)%gs_accl = tile_fluxes(1)%canopy%gs_accl
 
         init_daily = .false.
 
