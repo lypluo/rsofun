@@ -201,7 +201,6 @@ contains
     ! annual diagnostics
     !----------------------------------------------------------------
     call diag_annual( tile(:), tile_fluxes(:) )
-    
 
     if (verbose) print*,'Done with biosphere for this year. Guete Rutsch!'
 

@@ -101,6 +101,9 @@
       <a href="../articles/example_pmodel.html">Example using P-model</a>
     </li>
     <li>
+      <a href="../articles/example_pmodel_subdaily.html">Example using P-model at sub-daily time step</a>
+    </li>
+    <li>
       <a href="../articles/prepare_inputs_rsofun.html">Prepare rsofun forcing data</a>
     </li>
   </ul>
@@ -135,7 +138,7 @@
     <p>Complements the settings based on the site metainfo CSV file or data frame.</p>
     </div>
 
-    <pre class="usage"><span class='fu'>prepare_setup_sofun</span>(<span class='no'>siteinfo</span>, <span class='no'>params_siml</span>)</pre>
+    <pre class="usage"><span class='fu'>prepare_setup_sofun</span><span class='op'>(</span><span class='va'>siteinfo</span>, <span class='va'>params_siml</span><span class='op'>)</span></pre>
 
     <h2 class="hasAnchor" id="arguments"><a class="anchor" href="#arguments"></a>Arguments</h2>
     <table class="ref-arguments">
@@ -155,7 +158,8 @@
     <p>A dataframe (tibble) containing the site meta info, complemented by column 'params_siml' which is a nested list of complemented simulation parameters.</p>
 
     <h2 class="hasAnchor" id="examples"><a class="anchor" href="#examples"></a>Examples</h2>
-    <pre class="examples"><div class='input'><span class='no'>setup</span> <span class='kw'>&lt;-</span> <span class='fu'>prepare_setup_sofun</span>(<span class='kw'>siteinfo</span> <span class='kw'>=</span> <span class='no'>siteinfo</span>, <span class='kw'>params_siml</span> <span class='kw'>=</span> <span class='no'>params_siml</span>)</div><div class='output co'>#&gt; <span class='error'>Error in prepare_setup_sofun(siteinfo = siteinfo, params_siml = params_siml): object 'siteinfo' not found</span></div><div class='input'>
+    <pre class="examples"><div class='input'><span class='va'>setup</span> <span class='op'>&lt;-</span> <span class='fu'>prepare_setup_sofun</span><span class='op'>(</span>siteinfo <span class='op'>=</span> <span class='va'>siteinfo</span>, params_siml <span class='op'>=</span> <span class='va'>params_siml</span><span class='op'>)</span>
+</div><div class='output co'>#&gt; <span class='error'>Error in prepare_setup_sofun(siteinfo = siteinfo, params_siml = params_siml): object 'siteinfo' not found</span></div><div class='input'>
 </div></pre>
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
@@ -172,7 +176,7 @@
 </div>
 
 <div class="pkgdown">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.5.1.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/">pkgdown</a> 1.6.1.</p>
 </div>
 
       </footer>
