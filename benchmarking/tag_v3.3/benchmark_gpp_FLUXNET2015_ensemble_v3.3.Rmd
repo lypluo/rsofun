@@ -219,7 +219,7 @@ out_eval$gpp$fluxnet$plot$gg_modobs_spatial_annual
 ```{r warning=FALSE, message=FALSE}
 load("~/data/rsofun_benchmarking/df_drivers_fluxnet2015_allsites.Rdata")
 df_output_allsites <- runread_pmodel_f(
-     df_drivers_fluxnet2015,
+     df_drivers_fluxnet2015_allsites,
      params_modl = params_modl, 
      makecheck = TRUE,
      parallel = FALSE

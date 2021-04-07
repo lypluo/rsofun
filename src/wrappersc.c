@@ -33,6 +33,7 @@ void F77_NAME(pmodel_f)(
     double *latitude,
     double *altitude,
     double *whc,
+    double *thome,
     double *soiltexture,
     int    *nt,
     double *par,
@@ -65,6 +66,7 @@ extern SEXP pmodel_f_C(
     SEXP latitude,
     SEXP altitude,
     SEXP whc,
+    SEXP thome,
     SEXP soiltexture,
     SEXP n,
     SEXP par,
@@ -102,6 +104,7 @@ extern SEXP pmodel_f_C(
         REAL(latitude),
         REAL(altitude),
         REAL(whc),
+        REAL(thome),
         REAL(soiltexture),
         INTEGER(n),
         REAL(par),
@@ -490,7 +493,7 @@ extern SEXP lm3ppa_f_C(
 // Declarations for all functions
 /////////////////////////////////////////////////////////////
 static const R_CallMethodDef CallEntries[] = {
-  {"pmodel_f_C",   (DL_FUNC) &pmodel_f_C,   27},  // Specify number of arguments to C wrapper as the last number here
+  {"pmodel_f_C",   (DL_FUNC) &pmodel_f_C,   28},  // Specify number of arguments to C wrapper as the last number here
   {"lm3ppa_f_C",   (DL_FUNC) &lm3ppa_f_C,   39},  // Number of the SEXP variables (not the output)
   {NULL,         NULL,                0}
 };

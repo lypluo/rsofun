@@ -35,6 +35,7 @@ contains
     latitude,                  &     
     altitude,                  &     
     whc,                       &
+    thome,                     &
     soiltexture,               &
     nt,                        &
     par,                       &
@@ -79,6 +80,7 @@ contains
     real(kind=c_double),  intent(in) :: latitude
     real(kind=c_double),  intent(in) :: altitude
     real(kind=c_double),  intent(in) :: whc
+    real(kind=c_double),  intent(in) :: thome
     real(kind=c_double),  dimension(4,nlayers_soil), intent(in) :: soiltexture   ! soil texture (rows: sand, clay, organic, gravel; columns: layers from top)
     integer(kind=c_int),  intent(in) :: nt ! number of time steps
     real(kind=c_double),  dimension(6), intent(in) :: par  ! free (calibratable) model parameters
@@ -149,6 +151,9 @@ contains
     ! Overwrite whc
     myinterface%whc_prescr = real( whc )
 
+    ! home temperature
+    myinterface%thome = real( thome )
+
     !----------------------------------------------------------------
     ! GET CALIBRATABLE MODEL PARAMETERS (so far a small list)
     !----------------------------------------------------------------
@@ -183,6 +188,8 @@ contains
                                           myinterface%params_siml%in_netrad, &
                                           myinterface%grid%elv &
                                           )
+
+
 
       ! Get annual, gobally uniform CO2
       myinterface%pco2 = getco2(  nt, &

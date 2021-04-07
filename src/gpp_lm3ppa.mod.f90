@@ -299,6 +299,7 @@ contains
                                     tc             = temp_memory, &
                                     vpd            = vpd_memory, &
                                     patm           = patm_memory, &
+                                    tc_home        = 25.0, &                 ! XXXX temporary solution!!!
                                     c4             = .false., &
                                     method_optci   = "prentice14", &
                                     method_jmaxlim = "wang17" &

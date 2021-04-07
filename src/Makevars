@@ -1,3 +1,11 @@
+# tried to follow this: https://www.nistara.net/post/compile-issues-r/
+# VER=-10
+# CC=gcc$(VER)
+# CXX=g++$(VER)
+# CFLAGS=-mtune=native -g -O2 -Wall -pedantic -Wconversion
+# CXXFLAGS=-mtune=native -g -O2 -Wall -pedantic -Wconversion
+# FLIBS=-L/usr/local/Cellar/gcc/10.2.0_4/lib/gcc/10
+
 PKG_FFLAGS += -ffree-line-length-0 -fbacktrace -ffpe-trap=invalid,zero,overflow # -Wuninitialized -O -Wall -Wextra -pedantic -fbacktrace
 
 # C objects

@@ -50,6 +50,8 @@ siteinfo <- ingestr::siteinfo_fluxnet2015 %>%
   ## add info
   dplyr::mutate(date_start = lubridate::ymd(paste0(year_start, "-01-01"))) %>%
   dplyr::mutate(date_end = lubridate::ymd(paste0(year_end, "-12-31")))
+
+## extract mean tmax of warmest month from worldclim for each site, see https://stineb.github.io/ingestr/articles/example.html#worldclim-3 -> new column in siteinfo data frame 'thome')
 ```
 
 ### Simulation settings
@@ -130,12 +132,17 @@ Now, meteorological forcing data and fAPAR data for each time step have to be co
 ```{r}
 df_drivers <- rsofun::df_drivers
 df_drivers
+
+## fudge df_drivers for this example
+df_drivers$siteinfo[[1]] <- df_drivers$siteinfo[[1]] %>% 
+  mutate(thome = 27.00)
 ```
 
 The units of fluxes have changed, but the object `df_drivers` has not been adjusted accordingly. Do it "by hand".
 
 ```{r}
-df_drivers$forcing[[1]]$prec <- rsofun::df_drivers$forcing[[1]]$prec / (60*60*24)
+df_drivers$forcing[[1]]$rainf <- rsofun::df_drivers$forcing[[1]]$prec / (60*60*24)
+df_drivers$forcing[[1]]$snowf <- 0
 df_drivers$forcing[[1]]$ppfd <- rsofun::df_drivers$forcing[[1]]$ppfd / (60*60*24)
 ```
 
@@ -360,7 +367,7 @@ Get the [rbeni](https://github.com/stineb/rbeni) R package for nice plotting fun
 ```{r}
 library(rbeni)
 gg <- out_eval$gpp$fluxnet$data$xdf %>% 
-  analyse_modobs2("mod", "obs", type = "heat")
+  analyse_modobs2("mod", "obs")
 gg$gg +
   labs(title = "FR-Pue: modelled vs. observed GPP", 
        x = expression(paste("Modelled GPP (gC m"^{-2}, "d"^{-1}, ")")), 
