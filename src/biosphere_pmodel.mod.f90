@@ -139,7 +139,7 @@ contains
                   myinterface%grid, &
                   myinterface%params_siml%soilmstress, &
                   myinterface%params_siml%tempstress, &
-                  myinterface%thome, &
+                  myinterface%tc_home, &
                   init_daily &
                   )
 

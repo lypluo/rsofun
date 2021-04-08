@@ -5,7 +5,7 @@
 #' @param siteinfo Site meta info
 #' @param forcing forcing (input) dataframe (returned object by \link{prepare_input_sofun})
 #' @param df_soiltexture A list of soil texture parameters
-#' @param params_modl Model parameters 
+#' @param params_modl Model parameters
 #' @param makecheck A logical specifying whether checks are performed to verify forcings.
 #'
 #' @details This is the model
@@ -15,8 +15,14 @@
 #'
 run_pmodel_f_bysite <- function( sitename, params_siml, siteinfo, forcing, df_soiltexture, params_modl, makecheck = TRUE ){
 
+  # sitename <- df_drivers$sitename[1] #  CONTINUE: Remove after fixing crash
+  # params_siml <- df_drivers$params_siml[[1]] #  CONTINUE: Remove after fixing crash
+  # siteinfo <- df_drivers$siteinfo[[1]] #  CONTINUE: Remove after fixing crash
+  # forcing <- df_drivers$forcing[[1]] #  CONTINUE: Remove after fixing crash
+  # df_soiltexture <- df_drivers$df_soiltexture[[1]] #  CONTINUE: Remove after fixing crash
+
   # rlang::inform(paste("run_pmodel_f_bysite() for ", sitename))
-  
+
   ## record first year and number of years in forcing data frame (may need to overwrite later)
   ndayyear <- 365
   firstyeartrend_forcing <- forcing %>% ungroup() %>% slice(1) %>% pull(date) %>% lubridate::year()
@@ -25,11 +31,11 @@ run_pmodel_f_bysite <- function( sitename, params_siml, siteinfo, forcing, df_so
   ## determine number of seconds per time step
   times <- forcing %>% pull(date) %>% head(2)
   secs_per_tstep <- difftime(times[1], times[2], units = "secs") %>% as.integer() %>% abs()
-  
+
   ## re-define units and naming of forcing dataframe
-  forcing <- forcing %>% 
-    dplyr::mutate(netrad = -9999.9, fsun = (100-ccov)/100, ndep = 0.0) %>% 
-    dplyr::select(temp, rainf, vpd, ppfd, netrad, fsun, snowf, co2, ndep, fapar, patm)
+  forcing <- forcing %>%
+    dplyr::mutate(netrad = -9999.9, fsun = (100-ccov)/100, ndep = 0.0, snowf = 0) %>%  #  TODO: Added snowf=0 here to avoid crashes
+    dplyr::select(temp, prec, vpd, ppfd, netrad, fsun, snowf, co2, ndep, fapar, patm)
 
   ## Tests
   do_continue <- TRUE
@@ -39,8 +45,8 @@ run_pmodel_f_bysite <- function( sitename, params_siml, siteinfo, forcing, df_so
       rlang::warn(paste("Error: Missing value in temp for site", sitename, "\n"))
       do_continue <- FALSE
     }
-    if (any(is.nanull(forcing$rainf))){
-      rlang::warn(paste("Error: Missing value in rainf for site", sitename, "\n"))
+    if (any(is.nanull(forcing$prec))){
+      rlang::warn(paste("Error: Missing value in prec for site", sitename, "\n"))
       do_continue <- FALSE
     }
     if (any(is.nanull(forcing$vpd))){
@@ -79,8 +85,7 @@ run_pmodel_f_bysite <- function( sitename, params_siml, siteinfo, forcing, df_so
       rlang::warn(paste("Error: Missing value in patm for site", sitename, "\n"))
       do_continue <- FALSE
     }
-    if (is.nanull(params_siml))
-
+    # if (is.nanull(params_siml))
 
     if (is.nanull(params_siml$spinup)){
       rlang::warn(paste("Error: Missing element in params_siml: spinup"))
@@ -161,7 +166,7 @@ run_pmodel_f_bysite <- function( sitename, params_siml, siteinfo, forcing, df_so
       rlang::warn(paste(" Number of years data: ", nrow(forcing)/ndayyear), "\n")
       rlang::warn(paste(" Number of simulation years: ", params_siml$nyeartrend, "\n"))
       rlang::warn(paste(" Site name: ", sitename, "\n"))
-      
+
       if (nrow(forcing) %% ndayyear == 0){
         ## Overwrite params_siml$nyeartrend and params_siml$firstyeartrend based on 'forcing'
         params_siml$nyeartrend <- nyeartrend_forcing
@@ -173,14 +178,14 @@ run_pmodel_f_bysite <- function( sitename, params_siml, siteinfo, forcing, df_so
         rlang::warn(" Returning a dummy data frame.")
         do_continue <- FALSE
       }
-      
+
     }
   }
 
   if (do_continue){
 
     forcing <- as.matrix(forcing)
-    
+
     n <- as.integer(nrow(forcing))
 
     ## Model parameters as vector
@@ -194,16 +199,16 @@ run_pmodel_f_bysite <- function( sitename, params_siml, siteinfo, forcing, df_so
       )
 
     ## Soil texture as matrix (layer x texture parameter)
-    soiltexture <- df_soiltexture %>% 
-      dplyr::select(fsand, fclay, forg, fgravel) %>% 
-      as.matrix() %>% 
+    soiltexture <- df_soiltexture %>%
+      dplyr::select(fsand, fclay, forg, fgravel) %>%
+      as.matrix() %>%
       t()
 
     ## C wrapper call
     out <- .Call(
 
       'pmodel_f_C',
-      
+
       ## Simulation parameters
       spinup                    = as.logical(params_siml$spinup),
       spinupyears               = as.integer(params_siml$spinupyears),
@@ -228,29 +233,29 @@ run_pmodel_f_bysite <- function( sitename, params_siml, siteinfo, forcing, df_so
       latitude                  = as.numeric(siteinfo$lat),
       altitude                  = as.numeric(siteinfo$elv),
       whc                       = as.numeric(siteinfo$whc),
-      thome                     = as.numeric(siteinfo$thome),
+      tc_home                   = as.numeric(siteinfo$tc_home),
       soiltexture               = soiltexture,
       n                         = n,
-      par                       = par, 
+      par                       = par,
       forcing                   = forcing
       )
-    
+
     ## Prepare output to be a nice looking tidy data frame (tibble)
     ddf <- init_dates_dataframe(yrstart = params_siml$firstyeartrend, yrend = params_siml$firstyeartrend + params_siml$nyeartrend - 1, noleap = TRUE)
 
     out <- out %>%
-      as.matrix() %>% 
-      as.data.frame() %>% 
+      as.matrix() %>%
+      as.data.frame() %>%
       setNames(c("fapar", "gpp", "transp", "latenth", "pet", "vcmax", "jmax", "vcmax25", "jmax25", "gs_accl", "wscal")) %>%
       as_tibble(.name_repair = "check_unique") %>%
-      # dplyr::mutate(sitename = sitename) %>% 
+      # dplyr::mutate(sitename = sitename) %>%
       dplyr::bind_cols(ddf,.)
 
   } else {
-    out <- tibble(date = lubridate::ymd("2000-01-01"), fapar = NA, gpp = NA, transp = NA, latenth = NA, 
-                  pet = NA, vcmax = NA, jmax = NA, vcmax25 = NA, jmax25 = NA, gs_accl = NA, wscal = NA)    # sitename = sitename, 
+    out <- tibble(date = lubridate::ymd("2000-01-01"), fapar = NA, gpp = NA, transp = NA, latenth = NA,
+                  pet = NA, vcmax = NA, jmax = NA, vcmax25 = NA, jmax25 = NA, gs_accl = NA, wscal = NA)    # sitename = sitename,
   }
-    
+
   return(out)
 
 }

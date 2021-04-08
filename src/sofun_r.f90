@@ -35,7 +35,7 @@ contains
     latitude,                  &     
     altitude,                  &     
     whc,                       &
-    thome,                     &
+    tc_home,                   &
     soiltexture,               &
     nt,                        &
     par,                       &
@@ -80,7 +80,7 @@ contains
     real(kind=c_double),  intent(in) :: latitude
     real(kind=c_double),  intent(in) :: altitude
     real(kind=c_double),  intent(in) :: whc
-    real(kind=c_double),  intent(in) :: thome
+    real(kind=c_double),  intent(in) :: tc_home
     real(kind=c_double),  dimension(4,nlayers_soil), intent(in) :: soiltexture   ! soil texture (rows: sand, clay, organic, gravel; columns: layers from top)
     integer(kind=c_int),  intent(in) :: nt ! number of time steps
     real(kind=c_double),  dimension(6), intent(in) :: par  ! free (calibratable) model parameters
@@ -152,7 +152,7 @@ contains
     myinterface%whc_prescr = real( whc )
 
     ! home temperature
-    myinterface%thome = real( thome )
+    myinterface%tc_home = real( tc_home )
 
     !----------------------------------------------------------------
     ! GET CALIBRATABLE MODEL PARAMETERS (so far a small list)

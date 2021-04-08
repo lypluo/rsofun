@@ -31,14 +31,38 @@ load("~/data/rsofun_benchmarking/df_drivers_fluxnet2015.Rdata")
 
 There seem to be some leap year dates which create problems for rsofun. Drop Feb. 29 dates.
 ```{r}
+# Extract mean maximum temperature for all months
+df_tc_home <- ingest(
+    siteinfo_fluxnet2015,
+    source    = "worldclim",
+    settings  = list(varnam = c("tmax")),
+    dir       = "~/data/worldclim") %>%
+  
+  # Select mean maximum temperature of warmest month
+      unnest(cols = c(data)) %>%
+      rowwise() %>% 
+      mutate(tc_home = max(c_across(tmax_01:tmax_12))) %>% 
+      dplyr::select(!(starts_with("tmax")))
+
+# Attach tc_home to siteinfo in drivers
+df_drivers_fluxnet2015 <- df_drivers_fluxnet2015 %>%
+  dplyr::select(!siteinfo) %>%
+  left_join(df_drivers_fluxnet2015 %>% 
+              dplyr::select(sitename, siteinfo) %>% 
+              unnest(cols = c("siteinfo")) %>% 
+              left_join(df_tc_home, by = "sitename") %>%
+              nest("siteinfo" = !sitename),
+            by = "sitename")
+
+## ---------------------------------------
+## Below is original code
 df_drivers_fluxnet2015 <- df_drivers_fluxnet2015 %>% 
   dplyr::select(sitename, forcing) %>% 
   unnest(forcing) %>% 
   dplyr::filter(!(month(date)==2 & mday(date)==29)) %>% 
   
   ## model requires flux per seconds now
-  mutate(prec = prec / (60*60*24), ppfd = ppfd / (60*60*24)) %>% 
-  
+  mutate(prec = prec / (60*60*24), ppfd = ppfd / (60*60*24)) %>%
   group_by(sitename) %>% 
   nest() %>%
   rename(forcing = data) %>% 
@@ -114,6 +138,8 @@ if (!file.exists(filn)){
 
 Calibrate the model.
 ```{r warning=FALSE, message=FALSE}
+df_drivers_fluxnet2015$forcing[[1]]$snowf <- 0 # To be added so that calib_sofun does not give an error
+
 set.seed(1982)
 settings_calib <- calib_sofun(
   df_drivers = dplyr::filter(df_drivers_fluxnet2015, sitename %in% calibsites),  # use only one site
