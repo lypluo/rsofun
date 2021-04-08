@@ -840,7 +840,7 @@ contains
     ! 
     ! ! local variables
     ! real :: tkref, tkleaf, dent, fva, fvb, mytcref
-    ! print*,'Kattge vcmax'
+    ! print*,'Kattge vcmax, Ha:', Ha
     ! !-------------------------
 
     !-------------------------
@@ -852,8 +852,9 @@ contains
     
     ! local variables
     real :: tkref, tkleaf, dent, fva, fvb, mytcref, Ha
-    print*,'Kumarathunge vcmax'
     Ha = 42600 + 1.14 * tcgrowth ! Acclimation for vcmax
+
+    print*,'Kumarathunge vcmax, Ha:', Ha
     !-------------------------
 
 
@@ -911,7 +912,10 @@ contains
     ! 
     ! ! local variables
     ! real :: tkref, tkleaf, dent, fva, fvb, mytcref
-    ! print*,'Kattge jmax'
+    !
+    ! ! Entropy calculation, equations given in Celsius, not in Kelvin ('tcgrowth' corresponds to 'tmean' in Nicks, 'tc25' is 'to' in Nick's)
+    ! dent = a_ent - b_ent * tcgrowth
+    ! print*,'Kattge jmax, dent:', dent
     ! !-------------------------
 
     !-------------------------
@@ -925,7 +929,10 @@ contains
     
     ! local variables
     real :: tkref, tkleaf, dent, fva, fvb, mytcref
-    print*,'Kumarathunge jmax'   
+
+    ! Entropy calculation, equations given in Celsius, not in Kelvin
+    dent = a_ent - b_ent * tc_home - c_ent * (tcgrowth - tc_home)
+    print*,'Kumarathunge jmax, dent:', dent   
     !-------------------------
 
     if (present(tcref)) then
@@ -935,16 +942,7 @@ contains
     end if
 
     tkref = mytcref + 273.15  ! to Kelvin
-
-    ! conversion of temperature to Kelvin, tcleaf is the instantaneous leaf temperature in degrees C. 
-    tkleaf = tcleaf + 273.15
-
-    ! calculate entropy following Kattge & Knorr (2007), negative slope and y-axis intersect is when expressed as a function of temperature in degrees Celsius, not Kelvin !!!
-    ! Kattge2007:
-    ! dent = a_ent - b_ent * tcgrowth   ! Knottge2007 Implementation, 'tcgrowth' corresponds to 'tmean' in Nicks, 'tc25' is 'to' in Nick's
-    
-    ! Kumarathunge2019:
-     dent = a_ent - b_ent * tc_home - c_ent * (tcgrowth - tc_home)
+    tkleaf = tcleaf + 273.15  ! conversion of temperature to Kelvin, tcleaf is the instantaneous leaf temperature in degrees C. 
 
     fva = calc_ftemp_arrhenius( tkleaf, Ha, tkref )
     fvb = (1.0 + exp( (tkref * dent - Hd)/(kR * tkref) ) ) / (1.0 + exp( (tkleaf * dent - Hd)/(kR * tkleaf) ) )

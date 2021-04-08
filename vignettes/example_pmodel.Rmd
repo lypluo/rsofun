@@ -148,7 +148,7 @@ Now, meteorological forcing data and fAPAR data for each time step have to be co
 df_drivers <- rsofun::df_drivers
 df_drivers
 
-## TODO: fudge df_drivers for this example
+## TODO - DONE: fudge df_drivers for this example
 df_drivers$siteinfo[[1]] <- df_drivers$siteinfo[[1]] %>% 
   mutate(tc_home = siteinfo$tc_home)
 ```

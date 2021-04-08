@@ -31,6 +31,7 @@ load("~/data/rsofun_benchmarking/df_drivers_fluxnet2015.Rdata")
 
 There seem to be some leap year dates which create problems for rsofun. Drop Feb. 29 dates.
 ```{r}
+## New code for tc_home implentation:
 # Extract mean maximum temperature for all months
 df_tc_home <- ingest(
     siteinfo_fluxnet2015,
@@ -54,7 +55,6 @@ df_drivers_fluxnet2015 <- df_drivers_fluxnet2015 %>%
               nest("siteinfo" = !sitename),
             by = "sitename")
 
-## ---------------------------------------
 ## Below is original code
 df_drivers_fluxnet2015 <- df_drivers_fluxnet2015 %>% 
   dplyr::select(sitename, forcing) %>% 

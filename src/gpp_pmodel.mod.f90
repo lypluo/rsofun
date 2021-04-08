@@ -246,7 +246,7 @@ contains
 
       ! quantities with instantaneous temperature response
       tile_fluxes(lu)%plant(pft)%vcmax = calc_ftemp_inst_vcmax( climate%dtemp, climate%dtemp, tcref = 25.0 ) * out_pmodel%vcmax25
-      tile_fluxes(lu)%plant(pft)%jmax  = calc_ftemp_inst_jmax(  climate%dtemp, climate%dtemp, tc_home, tcref = 25.0 ) * out_pmodel%jmax25
+      tile_fluxes(lu)%plant(pft)%jmax  = calc_ftemp_inst_jmax( climate%dtemp, climate%dtemp, tc_home, tcref = 25.0 ) * out_pmodel%jmax25
 
       !----------------------------------------------------------------
       ! Stomatal conductance
