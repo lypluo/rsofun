@@ -180,7 +180,7 @@ contains
                               tc_home        = tc_home, &
                               c4             = params_pft_plant(pft)%c4, &
                               method_optci   = "prentice14", &
-                              method_jmaxlim = "wang17" &
+                              method_jmaxlim = "smith19" &
                               )
 
         ! ! xxx test
