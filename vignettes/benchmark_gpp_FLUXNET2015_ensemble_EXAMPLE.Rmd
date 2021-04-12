@@ -138,7 +138,7 @@ if (!file.exists(filn)){
 
 Calibrate the model.
 ```{r warning=FALSE, message=FALSE}
-df_drivers_fluxnet2015$forcing[[1]]$snowf <- 0 # To be added so that calib_sofun does not give an error
+df_drivers_fluxnet2015$forcing[[1]]$snowf <- 0 # To be added so that run_pmodel_f_bysite() does not give an error
 
 set.seed(1982)
 settings_calib <- calib_sofun(

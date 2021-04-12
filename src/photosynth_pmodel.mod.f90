@@ -10,7 +10,7 @@ module md_photosynth
   implicit none
 
   private
-  public pmodel, zero_pmodel, outtype_pmodel, calc_ftemp_inst_jmax, calc_ftemp_inst_vcmax
+  public pmodel, zero_pmodel, outtype_pmodel, calc_ftemp_inst_jmax, calc_ftemp_inst_vcmax, co2_to_ca, calc_gammastar, calc_kmm
 
   !----------------------------------------------------------------
   ! MODULE-SPECIFIC, PRIVATE VARIABLES
@@ -229,7 +229,7 @@ contains
 
 
     else if (method_jmaxlim=="wang17") then
-      print*,'Wang jmaxlim'
+      ! print*,'Wang jmaxlim'
 
       ! Include effect of Jmax limitation
       mprime = calc_mprime( out_optchi%mj )
@@ -248,7 +248,7 @@ contains
       ! stop 
 
     else if (method_jmaxlim=="smith19") then
-      print*,'Smith jmaxlim'
+      ! print*,'Smith jmaxlim'
 
       ! mc = (ci - gammastar) / (ci + kmm)                       ! Eq. 6
       ! print(paste("mc should be equal: ", mc, out_optchi%mc ) )
@@ -854,7 +854,7 @@ contains
     real :: tkref, tkleaf, dent, fva, fvb, mytcref, Ha
     Ha = 42600 + 1.14 * tcgrowth ! Acclimation for vcmax
 
-    print*,'Kumarathunge vcmax, Ha:', Ha
+    ! print*,'Kumarathunge vcmax, Ha:', Ha
     !-------------------------
 
 
@@ -932,7 +932,7 @@ contains
 
     ! Entropy calculation, equations given in Celsius, not in Kelvin
     dent = a_ent - b_ent * tc_home - c_ent * (tcgrowth - tc_home)
-    print*,'Kumarathunge jmax, dent:', dent   
+    ! print*,'Kumarathunge jmax, dent:', dent   
     !-------------------------
 
     if (present(tcref)) then

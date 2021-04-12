@@ -77,7 +77,7 @@ contains
     !------------------------------------------------------------------
     ! use md_plant, only: params_pft_plant, plant_type, plant_fluxes_type
     use md_sofunutils, only: dampen_variability
-    use md_photosynth, only: pmodel, zero_pmodel, outtype_pmodel, calc_ftemp_inst_vcmax, calc_ftemp_inst_jmax
+    use md_photosynth, only: pmodel, zero_pmodel, outtype_pmodel, calc_ftemp_inst_vcmax, calc_ftemp_inst_jmax, co2_to_ca, calc_gammastar, calc_kmm
 
     ! arguments
     type(tile_type), dimension(nlu), intent(inout) :: tile
@@ -113,7 +113,7 @@ contains
     real, save :: ppfd_memory
 
     ! xxx test
-    real :: a_c, a_j, a_returned, fact_jmaxlim
+    real :: a_c, a_j, a_returned, fact_jmaxlim, ca, gammastar, kmm, rd_to_vcmax, L, kv, ci_j, ci_c, gs_j, gs_c, assim, ci, kphio, rd
 
     !----------------------------------------------------------------
     ! Convert daily mean environmental conditions to conditions to
@@ -155,6 +155,7 @@ contains
 
       ! take the slowly varying temperature for governing quantum yield variations
       ftemp_kphio = calc_ftemp_kphio( temp_memory, params_pft_plant(pft)%c4 )
+      kphio = params_pft_gpp(pft)%kphio * ftemp_kphio
 
       !----------------------------------------------------------------
       ! P-model call to get a list of variables that are 
@@ -170,7 +171,7 @@ contains
         ! print*,'kphio, ppfd_memory, co2_memory, temp_memory, vpd_memory, patm_memory ', params_pft_gpp(pft)%kphio * ftemp_kphio, ppfd_memory, co2_memory, temp_memory, vpd_memory, patm_memory 
 
         out_pmodel = pmodel(  &
-                              kphio          = params_pft_gpp(pft)%kphio * ftemp_kphio, &
+                              kphio          = kphio, &
                               beta           = params_gpp%beta, &
                               ppfd           = ppfd_memory, &
                               co2            = co2_memory, &
@@ -180,7 +181,7 @@ contains
                               tc_home        = tc_home, &
                               c4             = params_pft_plant(pft)%c4, &
                               method_optci   = "prentice14", &
-                              method_jmaxlim = "smith19" &
+                              method_jmaxlim = "wang17" &
                               )
 
         ! ! xxx test
@@ -217,41 +218,85 @@ contains
         soilmstress = 1.0
       end if    
 
+      !! !----------------------------------------------------------------
+      !! ! GPP
+      !! ! This still does a linear scaling of daily GPP - knowingly wrong
+      !! ! but not too dangerous...
+      !! !----------------------------------------------------------------
+      !! tile_fluxes(lu)%plant(pft)%dgpp = tile(lu)%plant(pft)%fpc_grid * tile(lu)%canopy%fapar * climate%dppfd * myinterface%params_siml%secs_per_tstep * out_pmodel%lue * soilmstress
+      !! 
+      !! ! print*,'gpp',tile_fluxes(lu)%plant(pft)%dgpp
+      !! ! print*,'fpcgrid',tile(lu)%plant(pft)%fpc_grid
+      !! ! print*,'fapar',tile(lu)%canopy%fapar
+      !! ! print*,'ppfd', climate%dppfd
+      !! ! print*,'secspertstep', myinterface%params_siml%secs_per_tstep
+      !! ! print*,'lue', out_pmodel%lue
+      !! ! print*,'soilmstress', soilmstress
+      !! 
+      !! !----------------------------------------------------------------
+      !! ! Dark respiration
+      !! !----------------------------------------------------------------
+      !! tile_fluxes(lu)%plant(pft)%drd = tile(lu)%plant(pft)%fpc_grid * tile(lu)%canopy%fapar * params_gpp%rd_to_vcmax * out_pmodel%vcmax25 * calc_ftemp_inst_rd( climate%dtemp ) * c_molmass
+      !! 
+      !! !----------------------------------------------------------------
+      !! ! Vcmax and Jmax
+      !! !----------------------------------------------------------------
+      !! ! acclimated quantities
+      !! tile_fluxes(lu)%plant(pft)%vcmax25 = out_pmodel%vcmax25
+      !! tile_fluxes(lu)%plant(pft)%jmax25  = out_pmodel%jmax25
+      !! 
+      !! ! quantities with instantaneous temperature response
+      !! tile_fluxes(lu)%plant(pft)%vcmax = calc_ftemp_inst_vcmax( climate%dtemp, climate%dtemp, tcref = 25.0 ) * out_pmodel%vcmax25
+      !! tile_fluxes(lu)%plant(pft)%jmax  = calc_ftemp_inst_jmax( climate%dtemp, climate%dtemp, tc_home, tcref = 25.0 ) * out_pmodel%jmax25
+      !! 
+      !! !----------------------------------------------------------------
+      !! ! Stomatal conductance
+      !! !----------------------------------------------------------------
+      !! tile_fluxes(lu)%plant(pft)%gs_accl = out_pmodel%gs_setpoint
+      !! 
+      !---------------------------------------------------------------- 
+      ! inst_rpmodel implementation <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
       !----------------------------------------------------------------
-      ! GPP
-      ! This still does a linear scaling of daily GPP - knowingly wrong
-      ! but not too dangerous...
-      !----------------------------------------------------------------
-      tile_fluxes(lu)%plant(pft)%dgpp = tile(lu)%plant(pft)%fpc_grid * tile(lu)%canopy%fapar * climate%dppfd * myinterface%params_siml%secs_per_tstep * out_pmodel%lue * soilmstress
+      ! Ambient CO2
+      ca = co2_to_ca(climate_acclimation%dtemp, climate_acclimation%dpatm)
       
-      !! print*,'gpp',tile_fluxes(lu)%plant(pft)%dgpp
-      !! print*,'fpcgrid',tile(lu)%plant(pft)%fpc_grid
-      !! print*,'fapar',tile(lu)%canopy%fapar
-      !! print*,'ppfd', climate%dppfd
-      !! print*,'secspertstep', myinterface%params_siml%secs_per_tstep
-      !! print*,'lue', out_pmodel%lue
-      !! print*,'soilmstress', soilmstress
+      ! Instantaneous gammastar
+      gammastar = calc_gammastar(climate_acclimation%dtemp, climate_acclimation%dpatm)
+      
+      ! Instantaneous K
+      kmm = calc_kmm(climate_acclimation%dtemp, climate_acclimation%dpatm)
 
-      !----------------------------------------------------------------
-      ! Dark respiration
-      !----------------------------------------------------------------
-      tile_fluxes(lu)%plant(pft)%drd = tile(lu)%plant(pft)%fpc_grid * tile(lu)%canopy%fapar * params_gpp%rd_to_vcmax * out_pmodel%vcmax25 * calc_ftemp_inst_rd( climate%dtemp ) * c_molmass
-
-      !----------------------------------------------------------------
-      ! Vcmax and Jmax
-      !----------------------------------------------------------------
-      ! acclimated quantities
-      tile_fluxes(lu)%plant(pft)%vcmax25 = out_pmodel%vcmax25
-      tile_fluxes(lu)%plant(pft)%jmax25  = out_pmodel%jmax25
-
-      ! quantities with instantaneous temperature response
+      ! Instantaneous vcmax and jmax
       tile_fluxes(lu)%plant(pft)%vcmax = calc_ftemp_inst_vcmax( climate%dtemp, climate%dtemp, tcref = 25.0 ) * out_pmodel%vcmax25
       tile_fluxes(lu)%plant(pft)%jmax  = calc_ftemp_inst_jmax( climate%dtemp, climate%dtemp, tc_home, tcref = 25.0 ) * out_pmodel%jmax25
 
-      !----------------------------------------------------------------
-      ! Stomatal conductance
-      !----------------------------------------------------------------
-      tile_fluxes(lu)%plant(pft)%gs_accl = out_pmodel%gs_setpoint
+      ! Instantaneous dark respiration
+      rd = out_pmodel%vcmax25 * params_gpp%rd_to_vcmax * calc_ftemp_inst_rd(climate%dtemp)
+
+      ! Instantaneous kphio - TODO: Not needed because kphio does not adapt on daily changes?
+      ! kphio = kphio * calc_ftemp_kphio()
+
+      ! Aj, gs free
+      L = 1.0 / sqrt(1.0 + ((4.0 * kphio * climate_acclimation%dppfd) / tile_fluxes(lu)%plant(pft)%jmax)**2)
+      kv = (ca - gammastar) / (1 + out_pmodel%xi / sqrt(climate_acclimation%dvpd))
+      ci_j = ca - kv ! TODO: Why can we do this?
+      a_j = L * kphio * climate_acclimation%dppfd * (ci_j - gammastar)/(ci_j + 2 * gammastar)
+      gs_j = a_j / kv
+
+      ! Ac, gs free
+      ci_c = ci_j
+      a_c = tile_fluxes(lu)%plant(pft)%vcmax * (ci_c - gammastar)/(ci_c + kmm)
+      gs_c = a_j / kv
+
+      ! rpmodel has implementation tryout-code here for gs being not free
+
+      ! Assimilation
+      assim = min(a_j, a_c)
+      ci = max(ci_c, ci_j)
+
+      ! GPP -> TODO: Why not (assim - rd) * c_molmass * fapar ?
+      tile_fluxes(lu)%plant(pft)%dgpp = (assim - rd) * c_molmass * tile(lu)%canopy%fapar * tile(lu)%plant(pft)%fpc_grid
+
 
     end do pftloop
 
