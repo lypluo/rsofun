@@ -297,7 +297,6 @@ contains
       ! GPP -> TODO: Why not (assim - rd) * c_molmass * fapar ?
       tile_fluxes(lu)%plant(pft)%dgpp = (assim - rd) * c_molmass * tile(lu)%canopy%fapar * tile(lu)%plant(pft)%fpc_grid
 
-
     end do pftloop
 
   end subroutine gpp
@@ -676,7 +675,7 @@ contains
     params_gpp%rd_to_vcmax  = 0.01400000
 
     ! Apply identical temperature ramp parameter for all PFTs
-    params_gpp%tau_acclim     = 30.0
+    params_gpp%tau_acclim     = 30.0   ! days
     params_gpp%soilm_par_a    = myinterface%params_calib%soilm_par_a     ! is provided through standard input
     params_gpp%soilm_par_b    = myinterface%params_calib%soilm_par_b     ! is provided through standard input
 
