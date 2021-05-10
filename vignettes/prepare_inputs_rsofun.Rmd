@@ -46,7 +46,7 @@ In both cases, a small number of meta data variables have to be specified for ea
 -   `sitename`: any unique identifying of the site(s)
 -   `lat` for latitude (decimal degrees)
 -   `lon` for longitude (decimal degrees) - this is only used for data ingestion but not for the P-model simulation with `rsofun`.
--   `elv` for elevation (m a.s.l.). If this is not known, *ingestr* may be used to extract information from a digital elevation model.
+-   `elv` for elevation (m a.s.l.). If this is not known, *ingestr* may be used to extract information from a digital elevation model (e.g. by using ETOPO1 as source in *ingestr()*).
 -   `year_start` and `year_end` specifying years covered by the simulation. Data extraction and model simulations always cover all 365 days of each year.
 -   `whc` for the total rooting zone soil water holding capacity. This is not a temporary "fudge" solution. Set it to 170 mm if no better information is available.
 -   `koeppen_code` to group sites for evaluation by Koeppen-Geiger climate zones (may be ignored, only required for `eval_sofun()`).
@@ -83,6 +83,7 @@ ddf_watch <- ingest(
   getvars   = c("temp", "prec", "ppfd", "vpd"),
   dir       = "~/data/watch_wfdei/"  # adjust this with your local path
 )
+
 
 ddf_cru <- ingest(
   siteinfo = siteinfo,

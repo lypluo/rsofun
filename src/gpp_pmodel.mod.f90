@@ -78,6 +78,7 @@ contains
     ! use md_plant, only: params_pft_plant, plant_type, plant_fluxes_type
     use md_sofunutils, only: dampen_variability
     use md_photosynth, only: pmodel, zero_pmodel, outtype_pmodel, calc_ftemp_inst_vcmax, calc_ftemp_inst_jmax, co2_to_ca, calc_gammastar, calc_kmm
+    use md_photosynth_inst, only: pmodel_inst, outtype_pmodel_inst
 
     ! arguments
     type(tile_type), dimension(nlu), intent(inout) :: tile
@@ -96,8 +97,7 @@ contains
     ! real, dimension(npft), intent(inout)  :: drd             ! daily total dark respiraiton (gC m-2 d-1)
     ! real, dimension(npft), intent(inout)  :: dtransp         ! daily total transpiration (XXX)
 
-    ! local variables
-    type(outtype_pmodel) :: out_pmodel              ! list of P-model output variables
+    ! local variables - simulations
     type(climate_type)   :: climate_acclimation     ! list of climate variables to which P-model calculates acclimated traits
     integer    :: pft
     integer    :: lu
@@ -112,7 +112,17 @@ contains
     real, save :: patm_memory
     real, save :: ppfd_memory
 
-    ! xxx test
+    ! local variables - pmodel
+    type(outtype_pmodel) :: out_pmodel               ! output of acclimated P-model
+    type(outtype_pmodel_inst) :: out_pmodel_inst     ! output of instantaneous P-model under ambient conditions
+    type(outtype_pmodel_inst) :: out_pmodel_inst_opt ! output of instantaneous P-model under optimal conditions
+    real, dimension(400) :: temp_array               ! array to get optimal temperature
+    real, dimension(400) :: anet_array               ! array to get optimal assimilation
+    integer :: pos                                   ! variable to get position of optimal temperature
+    integer :: i                                     ! looping variable
+
+
+    ! xxx test TODO: Most of these variables can be removed because they were moved to the instant. pmodel module
     real :: a_c, a_j, a_returned, fact_jmaxlim, ca, gammastar, kmm, rd_to_vcmax, L, kv, ci_j, ci_c, gs_j, gs_c, assim, ci, kphio, rd
 
     !----------------------------------------------------------------
@@ -205,6 +215,11 @@ contains
 
       end if
 
+      ! Acclimated variables
+      tile_fluxes(lu)%plant(pft)%vcmax25 = out_pmodel%vcmax25
+      tile_fluxes(lu)%plant(pft)%jmax25  = out_pmodel%jmax25
+
+
       ! simple:
       if (nlu > 1) stop 'gpp: think about nlu > 1'
       lu = 1
@@ -216,10 +231,11 @@ contains
         soilmstress = calc_soilmstress( tile(1)%soil%phy%wscal, 0.0, params_pft_plant(1)%grass )
       else
         soilmstress = 1.0
-      end if    
+      end if
 
-      if (.true.) then
 
+      if (.false.) then
+        !----------------------------------------------------------------
         ! ORIGINAL CODE <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
         !----------------------------------------------------------------
         ! GPP
@@ -252,59 +268,75 @@ contains
         !----------------------------------------------------------------
         tile_fluxes(lu)%plant(pft)%gs_accl = out_pmodel%gs_setpoint
 
+      else if (.true.) then
 
-      else
+        !------------------------------!
+        ! Calling instantaneous pmodel !
+        !------------------------------!
 
-        !---------------------------------------------------------------- 
-        ! inst_rpmodel implementation <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-        !----------------------------------------------------------------
-        ! Ambient CO2
-        ca = co2_to_ca(co2, climate_acclimation%dpatm)
-        
-        ! Instantaneous gammastar
-        gammastar = calc_gammastar(climate_acclimation%dtemp, climate_acclimation%dpatm)
-        
-        ! Instantaneous K
-        kmm = calc_kmm(climate_acclimation%dtemp, climate_acclimation%dpatm)
-  
-        ! Instantaneous vcmax and jmax
-        tile_fluxes(lu)%plant(pft)%vcmax = calc_ftemp_inst_vcmax(climate%dtemp, climate%dtemp, tcref = 25.0 ) * out_pmodel%vcmax25
-        tile_fluxes(lu)%plant(pft)%jmax  = calc_ftemp_inst_jmax(climate%dtemp, climate%dtemp, tc_home, tcref = 25.0 ) * out_pmodel%jmax25
-  
-        ! Instantaneous dark respiration
-        tile_fluxes(lu)%plant(pft)%drd = tile(lu)%plant(pft)%fpc_grid * tile(lu)%canopy%fapar * c_molmass * out_pmodel%vcmax25 * params_gpp%rd_to_vcmax * calc_ftemp_inst_rd(climate%dtemp)
-  
-        ! Instantaneous kphio - TODO: Not needed because kphio does not adapt on daily changes?
-        ! kphio = kphio * calc_ftemp_kphio()
-  
-        ! Aj, gs free
-        L = 1.0 / sqrt(1.0 + ((4.0 * kphio * climate_acclimation%dppfd) / tile_fluxes(lu)%plant(pft)%jmax)**2)
-        kv = (ca - gammastar) / (1 + out_pmodel%xi / sqrt(climate_acclimation%dvpd))
-        ci_j = ca - kv
-        a_j = L * kphio * climate_acclimation%dppfd * (ci_j - gammastar)/(ci_j + 2 * gammastar)
-        gs_j = a_j / kv
+        out_pmodel_inst = pmodel_inst( &
+                                      vcmax25 = out_pmodel%vcmax25        , &
+                                      jmax25  = out_pmodel%jmax25         , &
+                                      xi      = out_pmodel%xi             , &
+                                      tc      = climate%dtemp             , &
+                                      vpd     = climate%dvpd              , &
+                                      co2     = co2                       , &
+                                      fapar   = tile(lu)%canopy%fapar     , &
+                                      ppfd    = climate%dppfd             , &
+                                      patm    = climate_acclimation%dpatm , &
+                                      kphio   = kphio                     , &
+                                      tc_home = tc_home                   , &
+                                      fixedCi = .false.                     & ! Toggel for fixing internal CO2 concentration
+                                      )
 
-        ! Ac, gs free
-        ci_c = ci_j
-        a_c = tile_fluxes(lu)%plant(pft)%vcmax * (ci_c - gammastar)/(ci_c + kmm)
-        gs_c = a_j / kv
-  
-        ! rpmodel has implementation tryout-code here for gs being not free
-  
-        ! Assimilation
-        assim = min(a_j, a_c)
-        ci = max(ci_c, ci_j)
-  
-        ! GPP 
-        tile_fluxes(lu)%plant(pft)%dgpp = assim  * c_molmass * tile(lu)%canopy%fapar * tile(lu)%plant(pft)%fpc_grid * myinterface%params_siml%secs_per_tstep
+        ! Instantaneous variables
+        tile_fluxes(lu)%plant(pft)%vcmax = out_pmodel_inst%vcmax
+        tile_fluxes(lu)%plant(pft)%jmax  = out_pmodel_inst%jmax
+        ! TODO is this drd formulation correct? We have to multiply by secs_per_tstep, right?
+        tile_fluxes(lu)%plant(pft)%drd   = tile(lu)%plant(pft)%fpc_grid * tile(lu)%canopy%fapar * c_molmass * myinterface%params_siml%secs_per_tstep * out_pmodel%vcmax25 * params_gpp%rd_to_vcmax * calc_ftemp_inst_rd(climate%dtemp)
+        tile_fluxes(lu)%plant(pft)%dgpp  = tile(lu)%plant(pft)%fpc_grid * tile(lu)%canopy%fapar * c_molmass * myinterface%params_siml%secs_per_tstep * out_pmodel_inst%assim 
 
       end if
+
+      !--------------------------------!
+      ! Acclimated optimal temperature !
+      !--------------------------------!
+
+      do i =1,400
+
+        temp_array(i) = i / 10.0
+
+        out_pmodel_inst_opt = pmodel_inst( &
+                                      vcmax25 = out_pmodel%vcmax25        , &
+                                      jmax25  = out_pmodel%jmax25         , &
+                                      xi      = out_pmodel%xi             , &
+                                      tc      = temp_array(i)             , &
+                                      vpd     = climate%dvpd              , &
+                                      co2     = co2                       , &
+                                      fapar   = tile(lu)%canopy%fapar     , &
+                                      ppfd    = 1800.0                    , &
+                                      patm    = climate_acclimation%dpatm , &
+                                      kphio   = kphio                     , &
+                                      tc_home = tc_home                   , &
+                                      fixedCi = .false.                     & ! .true. means fixed internal CO2 concen. of 275ppm
+                                      )                                       ! .false. estimates internal CO2 via optimality
+
+
+        !TODO: Is this formulation for anet correct?
+        anet_array(i) = (out_pmodel_inst_opt%assim * tile(lu)%plant(pft)%fpc_grid * tile(lu)%canopy%fapar * c_molmass * myinterface%params_siml%secs_per_tstep) - tile_fluxes(lu)%plant(pft)%drd
+      
+      end do
+
+      pos = maxloc(anet_array, 1)
+      tile_fluxes(lu)%plant(pft)%gs_accl = temp_array(pos)
 
     end do pftloop
 
   end subroutine gpp
 
-
+  ! -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------!
+  ! -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------!
+  ! -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------!
 
   ! function calc_dgpp( fapar, fpc_grid, dppfd, lue, ftemp_kphio, soilmstress ) result( my_dgpp )
   !   !//////////////////////////////////////////////////////////////////
@@ -564,7 +596,7 @@ contains
 
     fr = exp( apar * (tc - 25.0) - bpar * (tc**2 - 25.0**2) )
     
-  end function calc_ftemp_inst_rd  
+  end function calc_ftemp_inst_rd
 
 
   ! function calc_climate_acclimation( climate, grid, method ) result( climate_acclimation )
@@ -678,7 +710,7 @@ contains
     params_gpp%rd_to_vcmax  = 0.01400000
 
     ! Apply identical temperature ramp parameter for all PFTs
-    params_gpp%tau_acclim     = 30.0
+    params_gpp%tau_acclim     = 30.0                                     ! Original: 30.0
     params_gpp%soilm_par_a    = myinterface%params_calib%soilm_par_a     ! is provided through standard input
     params_gpp%soilm_par_b    = myinterface%params_calib%soilm_par_b     ! is provided through standard input
 
