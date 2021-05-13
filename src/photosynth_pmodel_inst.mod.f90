@@ -115,6 +115,11 @@ module md_photosynth_inst
       assim = min(a_j, a_c)
       ci = max(ci_c, ci_j)
   
+      ! leaf dark respiration scaled by instantaneous temperature
+      rd = (vcmax / calc_ftemp_inst_vcmax( tc, tc, tcref = 25.0 )) * params_gpp%rd_to_vcmax * calc_ftemp_inst_rd(tc)
+
+      ! net assimilation
+      anet = assim * (1.0 - gammastar/ci) - rd
 
       !--------------------------------!
       ! Definition of output           !
@@ -122,6 +127,7 @@ module md_photosynth_inst
       out_pmodel_inst%assim = assim
       out_pmodel_inst%vcmax = vcmax
       out_pmodel_inst%jmax  = jmax
-  
+      out_pmodel_inst%anet  = anet
+
     end function pmodel_inst
 end module md_photosynth_inst

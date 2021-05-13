@@ -322,8 +322,8 @@ contains
                                       )                                       ! .false. estimates internal CO2 via optimality
 
 
-        !TODO: Is this formulation for anet correct?
-        anet_array(i) = (out_pmodel_inst_opt%assim * tile(lu)%plant(pft)%fpc_grid * tile(lu)%canopy%fapar * c_molmass * myinterface%params_siml%secs_per_tstep) - tile_fluxes(lu)%plant(pft)%drd
+        !TODO: Is this formulation for anet correct? - calculated inside pmodel_inst now.
+        anet_array(i) = out_pmodel_inst_opt%anet
       
       end do
 
