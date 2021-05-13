@@ -15,12 +15,6 @@
 #'
 run_pmodel_f_bysite <- function( sitename, params_siml, siteinfo, forcing, df_soiltexture, params_modl, makecheck = TRUE ){
 
-  # sitename <- df_drivers$sitename[1] #  CONTINUE: Remove after fixing crash
-  # params_siml <- df_drivers$params_siml[[1]] #  CONTINUE: Remove after fixing crash
-  # siteinfo <- df_drivers$siteinfo[[1]] #  CONTINUE: Remove after fixing crash
-  # forcing <- df_drivers$forcing[[1]] #  CONTINUE: Remove after fixing crash
-  # df_soiltexture <- df_drivers$df_soiltexture[[1]] #  CONTINUE: Remove after fixing crash
-
   # rlang::inform(paste("run_pmodel_f_bysite() for ", sitename))
 
   ## record first year and number of years in forcing data frame (may need to overwrite later)
