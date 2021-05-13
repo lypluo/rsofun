@@ -293,7 +293,7 @@ contains
         tile_fluxes(lu)%plant(pft)%vcmax = out_pmodel_inst%vcmax
         tile_fluxes(lu)%plant(pft)%jmax  = out_pmodel_inst%jmax
         ! TODO is this drd formulation correct? We have to multiply by secs_per_tstep, right?
-        tile_fluxes(lu)%plant(pft)%drd   = tile(lu)%plant(pft)%fpc_grid * tile(lu)%canopy%fapar * c_molmass * myinterface%params_siml%secs_per_tstep * out_pmodel%vcmax25 * params_gpp%rd_to_vcmax * calc_ftemp_inst_rd(climate%dtemp)
+        tile_fluxes(lu)%plant(pft)%drd   = tile(lu)%plant(pft)%fpc_grid * tile(lu)%canopy%fapar * c_molmass * myinterface%params_siml%secs_per_tstep * out_pmodel_inst%rd
         tile_fluxes(lu)%plant(pft)%dgpp  = tile(lu)%plant(pft)%fpc_grid * tile(lu)%canopy%fapar * c_molmass * myinterface%params_siml%secs_per_tstep * out_pmodel_inst%assim 
 
       end if
