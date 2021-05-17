@@ -13,8 +13,10 @@ module md_photosynth_inst
       real :: assim
       real :: vcmax
       real :: jmax
-      ! real :: rd
-      ! real :: ci
+      real :: rd
+      real :: ci
+      real :: gammastar
+      real :: anet
       ! real :: a_j
       ! real :: a_c
       ! real :: ci_j
@@ -61,6 +63,8 @@ module md_photosynth_inst
       real :: gs_j
       real :: gs_c
       real :: assim
+      real :: anet
+      real :: rd
   
       ! Output variables
       type(outtype_pmodel_inst) :: out_pmodel_inst
@@ -92,7 +96,7 @@ module md_photosynth_inst
 
       ! If check for fixedCi
       if (fixedCi) then
-          ci_j = 275e-06 !275ppm
+          ci_j = 27.5 ! Corresponds to 275 ppm compared to ambient 10^6 Pa
       end if
 
       a_j = L * kphio * ppfd * (ci_j - gammastar)/(ci_j + 2 * gammastar)
@@ -101,11 +105,6 @@ module md_photosynth_inst
       ! If check for fixedCi
       ! Ac, gs free
       ci_c = ci_j
-
-      if (fixedCi) then
-          ci_c = 275e-06 !275ppm
-      end if
-
       a_c = vcmax * (ci_c - gammastar)/(ci_c + kmm)
       gs_c = a_j / kv
         
@@ -114,14 +113,58 @@ module md_photosynth_inst
       ! Assimilation
       assim = min(a_j, a_c)
       ci = max(ci_c, ci_j)
-  
+
+      ! Dark respiration
+      ! TODO: add rd_to_vcmax as variable
+      ! Ratio of Rdark to Vcmax25, number from Atkin et al., 2015 for C3 herbaceous
+      
+      rd = vcmax25 * 0.01400000 * calc_ftemp_inst_rd(tc)
+
+      ! Net Assimilation
+      anet = assim * (1.0 - gammastar/ci) - rd
 
       !--------------------------------!
       ! Definition of output           !
       !--------------------------------!
       out_pmodel_inst%assim = assim
+      out_pmodel_inst%anet  = anet
+      out_pmodel_inst%rd    = rd
       out_pmodel_inst%vcmax = vcmax
       out_pmodel_inst%jmax  = jmax
+      out_pmodel_inst%gammastar  = gammastar
+      out_pmodel_inst%ci    = ci
   
     end function pmodel_inst
+
+    ! TODO: Clean up where calc_ftemp_inst_rd() is located and called!
+
+    function calc_ftemp_inst_rd( tc ) result( fr )
+    !-----------------------------------------------------------------------
+    ! Output:   Factor fr to correct for instantaneous temperature response
+    !           of Rd (dark respiration) for:
+    !
+    !               Rd(temp) = fr * Rd(25 deg C) 
+    !
+    ! Ref:      Heskel et al. (2016) used by Wang Han et al. (in prep.)
+    !-----------------------------------------------------------------------
+    ! arguments
+    real, intent(in) :: tc      ! temperature (degrees C)
+
+    ! function return variable
+    real :: fr                  ! temperature response factor, relative to 25 deg C.
+
+    ! loal parameters
+    real, parameter :: apar = 0.1012
+    real, parameter :: bpar = 0.0005
+    real, parameter :: tk25 = 298.15 ! 25 deg C in Kelvin
+
+    ! local variables
+    real :: tk                  ! temperature (Kelvin)
+
+    ! conversion of temperature to Kelvin
+    tk = tc + 273.15
+
+    fr = exp( apar * (tc - 25.0) - bpar * (tc**2 - 25.0**2) )
+    
+  end function calc_ftemp_inst_rd
 end module md_photosynth_inst
