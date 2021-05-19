@@ -151,9 +151,6 @@ contains
     patm_memory = dampen_variability( climate_acclimation%dpatm, params_gpp%tau_acclim, patm_memory )
     ppfd_memory = dampen_variability( climate_acclimation%dppfd, params_gpp%tau_acclim, ppfd_memory )
 
-    ! xxx try
-    tile_fluxes(lu)%plant(pft)%debug1 = temp_memory
-
     tk = climate_acclimation%dtemp + kTkelvin
 
 
@@ -303,12 +300,14 @@ contains
       ! END OF Optimal Temperature !
       !----------------------------!
 
-      ! TODO: Hijacked variable for output
-      tile_fluxes(lu)%plant(pft)%gs_accl = temp_array(pos)         ! tc_opt
-      tile_fluxes(lu)%plant(pft)%jmax25  = temp_memory             ! tc_growth
-
-      tile_fluxes(lu)%plant(pft)%vcmax = out_pmodel_inst%vcmax
-      tile_fluxes(lu)%plant(pft)%jmax  = out_pmodel_inst%jmax
+      !----------------------------!
+      ! DEFINITION OF DEBUG OUTPUT !
+      !----------------------------!
+      ! Flexible debugging variables
+      tile_fluxes(lu)%plant(pft)%debug1 = temp_memory ! tc_growth
+      tile_fluxes(lu)%plant(pft)%debug2 = temp_array(pos) ! tc_opt
+      tile_fluxes(lu)%plant(pft)%debug3 = 0
+      tile_fluxes(lu)%plant(pft)%debug4 = 0
 
       ! simple:
       if (nlu > 1) stop 'gpp: think about nlu > 1'

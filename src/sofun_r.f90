@@ -233,7 +233,9 @@ contains
         output(idx_start:idx_end,10) = dble(out_biosphere%gs_accl(:))
         output(idx_start:idx_end,11) = dble(out_biosphere%wscal(:))
         output(idx_start:idx_end,12) = dble(out_biosphere%debug1(:))
-        xxx
+        output(idx_start:idx_end,13) = dble(out_biosphere%debug2(:))
+        output(idx_start:idx_end,14) = dble(out_biosphere%debug3(:))
+        output(idx_start:idx_end,15) = dble(out_biosphere%debug4(:))
 
       end if
 

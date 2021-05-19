@@ -181,6 +181,7 @@ contains
         ! populate function return variable
         !----------------------------------------------------------------
         if (nlu>1) stop 'think about nlu > 1'
+        
         out_biosphere%fapar(doy)   = tile(1)%canopy%fapar
         out_biosphere%gpp(doy)     = tile_fluxes(1)%canopy%dgpp
         out_biosphere%transp(doy)  = tile_fluxes(1)%canopy%daet
@@ -192,8 +193,12 @@ contains
         out_biosphere%jmax25(doy)  = tile_fluxes(1)%canopy%jmax25
         out_biosphere%gs_accl(doy) = tile_fluxes(1)%canopy%gs_accl
         out_biosphere%wscal(doy)   = tile(1)%soil%phy%wscal
-        out_biosphere%debug1(doy)  = tile_fluxes(1)%plant%debug1
-        xxx
+
+        ! Flexible debugging variables
+        out_biosphere%debug1(doy)  = tile_fluxes(1)%canopy%debug1
+        out_biosphere%debug2(doy)  = tile_fluxes(1)%canopy%debug2
+        out_biosphere%debug3(doy)  = tile_fluxes(1)%canopy%debug3
+        out_biosphere%debug4(doy)  = tile_fluxes(1)%canopy%debug4
 
         init_daily = .false.
 

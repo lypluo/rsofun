@@ -59,6 +59,10 @@ module md_interface_pmodel
     real, dimension(ndayyear) :: jmax25
     real, dimension(ndayyear) :: gs_accl
     real, dimension(ndayyear) :: wscal
+    real, dimension(ndayyear) :: debug1
+    real, dimension(ndayyear) :: debug2
+    real, dimension(ndayyear) :: debug3
+    real, dimension(ndayyear) :: debug4
   end type outtype_biosphere
 
 end module md_interface_pmodel

@@ -87,7 +87,11 @@ module md_plant_pmodel
     real :: jmax              ! daily varying Jmax (mol CO2 m-2 s-1)
     real :: gs_accl           ! acclimated stomatal conductance (xxx)
 
+    ! Flexible debugging variables
     real :: debug1
+    real :: debug2
+    real :: debug3
+    real :: debug4
 
     ! ! annual variables
     ! real :: agpp             ! annual total gross primary production [gC/m2/yr]           
