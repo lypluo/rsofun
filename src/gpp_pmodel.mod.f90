@@ -151,6 +151,9 @@ contains
     patm_memory = dampen_variability( climate_acclimation%dpatm, params_gpp%tau_acclim, patm_memory )
     ppfd_memory = dampen_variability( climate_acclimation%dppfd, params_gpp%tau_acclim, ppfd_memory )
 
+    ! xxx try
+    tile_fluxes(lu)%plant(pft)%debug1 = temp_memory
+
     tk = climate_acclimation%dtemp + kTkelvin
 
 

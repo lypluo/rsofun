@@ -87,6 +87,8 @@ module md_plant_pmodel
     real :: jmax              ! daily varying Jmax (mol CO2 m-2 s-1)
     real :: gs_accl           ! acclimated stomatal conductance (xxx)
 
+    real :: debug1
+
     ! ! annual variables
     ! real :: agpp             ! annual total gross primary production [gC/m2/yr]           
     ! real :: avcmax25_mean    ! annual Vcmax, normalised to 25 deg C, GPP-weighted mean
