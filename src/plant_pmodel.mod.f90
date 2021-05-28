@@ -92,6 +92,8 @@ module md_plant_pmodel
     real :: debug2
     real :: debug3
     real :: debug4
+    real :: debug5
+    real :: debug6
 
     ! ! annual variables
     ! real :: agpp             ! annual total gross primary production [gC/m2/yr]           

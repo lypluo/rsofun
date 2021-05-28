@@ -199,6 +199,8 @@ contains
         out_biosphere%debug2(doy)  = tile_fluxes(1)%canopy%debug2
         out_biosphere%debug3(doy)  = tile_fluxes(1)%canopy%debug3
         out_biosphere%debug4(doy)  = tile_fluxes(1)%canopy%debug4
+        out_biosphere%debug5(doy)  = tile_fluxes(1)%canopy%debug5
+        out_biosphere%debug6(doy)  = tile_fluxes(1)%canopy%debug6
 
         init_daily = .false.
 

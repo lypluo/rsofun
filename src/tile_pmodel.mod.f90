@@ -131,6 +131,8 @@ module md_tile_pmodel
     real :: debug2
     real :: debug3
     real :: debug4
+    real :: debug5
+    real :: debug6
 
     ! radiation
     real :: ppfd_splash
@@ -563,6 +565,8 @@ contains
       tile_fluxes(lu)%canopy%debug2 = sum(tile_fluxes(lu)%plant(:)%debug2 * tile(lu)%plant(:)%fpc_grid)
       tile_fluxes(lu)%canopy%debug3 = sum(tile_fluxes(lu)%plant(:)%debug3 * tile(lu)%plant(:)%fpc_grid)
       tile_fluxes(lu)%canopy%debug4 = sum(tile_fluxes(lu)%plant(:)%debug4 * tile(lu)%plant(:)%fpc_grid)
+      tile_fluxes(lu)%canopy%debug5 = sum(tile_fluxes(lu)%plant(:)%debug5 * tile(lu)%plant(:)%fpc_grid)
+      tile_fluxes(lu)%canopy%debug6 = sum(tile_fluxes(lu)%plant(:)%debug6 * tile(lu)%plant(:)%fpc_grid)
 
     end do
 

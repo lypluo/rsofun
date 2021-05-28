@@ -240,7 +240,7 @@ run_pmodel_f_bysite <- function( sitename, params_siml, siteinfo, forcing, df_so
     out <- out %>%
       as.matrix() %>%
       as.data.frame() %>%
-      setNames(c("fapar", "gpp", "transp", "latenth", "pet", "vcmax", "jmax", "vcmax25", "jmax25", "gs_accl", "wscal", "debug1", "debug2", "debug3", "debug4")) %>%
+      setNames(c("fapar", "gpp", "transp", "latenth", "pet", "vcmax", "jmax", "vcmax25", "jmax25", "gs_accl", "wscal", "debug1", "debug2", "debug3", "debug4", "debug5", "debug6")) %>%
       as_tibble(.name_repair = "check_unique") %>%
       # dplyr::mutate(sitename = sitename) %>%
       dplyr::bind_cols(ddf,.)

@@ -296,7 +296,7 @@ contains
                                     beta           = params_gpp%beta, &
                                     ppfd           = f_light(layer) * forcing%PAR * 1.0e-6, &
                                     co2            = co2_memory, &
-                                    tc             = temp_memory, &
+                                    tc_growth      = temp_memory, &
                                     vpd            = vpd_memory, &
                                     patm           = patm_memory, &
                                     tc_home        = 25.0, &                 ! XXXX temporary solution!!!

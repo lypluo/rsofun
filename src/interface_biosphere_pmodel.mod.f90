@@ -63,6 +63,8 @@ module md_interface_pmodel
     real, dimension(ndayyear) :: debug2
     real, dimension(ndayyear) :: debug3
     real, dimension(ndayyear) :: debug4
+    real, dimension(ndayyear) :: debug5
+    real, dimension(ndayyear) :: debug6
   end type outtype_biosphere
 
 end module md_interface_pmodel

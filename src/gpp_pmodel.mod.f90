@@ -116,10 +116,15 @@ contains
     type(outtype_pmodel) :: out_pmodel               ! output of acclimated P-model
     type(outtype_pmodel_inst) :: out_pmodel_inst     ! output of instantaneous P-model under ambient conditions
     type(outtype_pmodel_inst) :: out_pmodel_inst_opt ! output of instantaneous P-model under optimal conditions
-    real, dimension(400) :: temp_array               ! array to get optimal temperature
-    real, dimension(400) :: anet_array               ! array to get optimal assimilation
-    integer :: pos                                   ! variable to get position of optimal temperature
+
+    ! local variables - optimal temperature
     integer :: i                                     ! looping variable
+    integer :: pos                                   ! variable to get position of optimal temperature
+    real, dimension(400) :: temp_array               ! array for leaf temperature
+    real, dimension(400) :: anet_array               ! array for net assimilation
+    real, dimension(400) :: assim_array              ! array for gross assimilation
+    real, dimension(400) :: rd_array                 ! array for dark respiration
+    real, dimension(400) :: dummy_array              ! array for debugging
 
 
     ! xxx test TODO: Most of these variables can be removed because they were moved to the instant. pmodel module
@@ -180,12 +185,17 @@ contains
         !----------------------------------------------------------------
         ! print*,'kphio, ppfd_memory, co2_memory, temp_memory, vpd_memory, patm_memory ', params_pft_gpp(pft)%kphio * ftemp_kphio, ppfd_memory, co2_memory, temp_memory, vpd_memory, patm_memory 
 
+        
+       !------------------------------!
+       ! Calling acclimated pmodel    !
+       !------------------------------!
+
         out_pmodel = pmodel(  &
                               kphio          = kphio, &
                               beta           = params_gpp%beta, &
                               ppfd           = ppfd_memory, &
                               co2            = co2_memory, &
-                              tc             = temp_memory, &
+                              tc_growth      = temp_memory, &
                               vpd            = vpd_memory, &
                               patm           = patm_memory, &
                               tc_home        = tc_home, &
@@ -194,20 +204,6 @@ contains
                               method_jmaxlim = "wang17" &
                               )
 
-        ! ! xxx test
-        ! out_pmodel = pmodel(  &
-        !                       kphio          = 5.16605116e-02, &
-        !                       beta           = params_gpp%beta, &
-        !                       ppfd           = 1.77466325E-04, &
-        !                       co2            = 369.548828, &
-        !                       tc             = 7.46864176, &
-        !                       vpd            = 433.062012, &
-        !                       patm           = 98229.4453, &
-        !                       c4             = params_pft_plant(pft)%c4, &
-        !                       method_optci   = "prentice14", &
-        !                       method_jmaxlim = "wang17" &
-        !                       )
-
       else
 
         ! PFT is not present 
@@ -215,8 +211,8 @@ contains
 
       end if
 
-      ! TODO: Switch or PFT-Specific vcmax25:
-      ! out_pmodel%vcmax25 = 78.3e-6
+      ! TODO: Switch or PFT-Specific vcmax25: -> Careful with units! this is in mol/m2/s
+      ! out_pmodel%vcmax25 = 80.4e-6
 
       ! Acclimated variables
       tile_fluxes(lu)%plant(pft)%vcmax25 = out_pmodel%vcmax25
@@ -230,31 +226,26 @@ contains
 
       if (.true.) then
 
-        ! TODO: Calculation of instantaneous kphio, does this make sense?
-        ! instant = acclimated * instant factor
-        ! print*,'kphio_inst is calculated'
-        ! kphio = kphio * calc_ftemp_kphio( climate%dtemp, params_pft_plant(pft)%c4 )
-
-
         out_pmodel_inst = pmodel_inst( &
-                                      vcmax25 = out_pmodel%vcmax25        , &
-                                      jmax25  = out_pmodel%jmax25         , &
-                                      xi      = out_pmodel%xi             , &
-                                      tc      = climate%dtemp             , &
-                                      vpd     = climate%dvpd              , &
-                                      co2     = co2                       , &
-                                      fapar   = tile(lu)%canopy%fapar     , &
-                                      ppfd    = climate%dppfd             , &
-                                      patm    = climate_acclimation%dpatm , &
-                                      kphio   = kphio                     , &
-                                      tc_home = tc_home                   , &
-                                      fixedCi = .false.                     & ! Toggle for fixing internal CO2 concentration, true = fixed, false = optimal ci
+                                      vcmax25   = out_pmodel%vcmax25        , &
+                                      jmax25    = out_pmodel%jmax25         , &
+                                      xi        = out_pmodel%xi             , &
+                                      tc_leaf   = climate%dtemp             , &
+                                      vpd       = climate%dvpd              , &
+                                      co2       = co2                       , &
+                                      fapar     = tile(lu)%canopy%fapar     , &
+                                      ppfd      = climate%dppfd             , &
+                                      patm      = climate%dpatm             , &
+                                      kphio     = kphio                     , &
+                                      tc_growth = temp_memory               , &
+                                      tc_home   = tc_home                   , &
+                                      fixedCi   = .false.                     & ! Toggle for fixing internal CO2 concentration, true = fixed, false = optimal ci
                                       )
 
         ! Instantaneous variables
         tile_fluxes(lu)%plant(pft)%vcmax = out_pmodel_inst%vcmax
         tile_fluxes(lu)%plant(pft)%jmax  = out_pmodel_inst%jmax
-        tile_fluxes(lu)%plant(pft)%drd   = tile(lu)%plant(pft)%fpc_grid * tile(lu)%canopy%fapar * c_molmass * myinterface%params_siml%secs_per_tstep * out_pmodel_inst%rd
+        tile_fluxes(lu)%plant(pft)%drd   = tile(lu)%plant(pft)%fpc_grid * tile(lu)%canopy%fapar * myinterface%params_siml%secs_per_tstep * out_pmodel_inst%rd
         tile_fluxes(lu)%plant(pft)%dgpp  = tile(lu)%plant(pft)%fpc_grid * tile(lu)%canopy%fapar * c_molmass * myinterface%params_siml%secs_per_tstep * out_pmodel_inst%assim
 
       end if
@@ -268,33 +259,33 @@ contains
         temp_array(i) = i / 10.0
 
         out_pmodel_inst_opt = pmodel_inst( &
-                                      vcmax25 = out_pmodel%vcmax25        , &
-                                      jmax25  = out_pmodel%jmax25         , &
-                                      xi      = out_pmodel%xi             , &
-                                      tc      = temp_array(i)             , &
-                                      vpd     = climate%dvpd              , &
-                                      co2     = co2                       , &
-                                      fapar   = tile(lu)%canopy%fapar     , &
-                                      ppfd    = climate%dppfd  * 100      , & ! Experiment at light-saturation
-                                      patm    = climate_acclimation%dpatm , &
-                                      kphio   = kphio                     , &
-                                      tc_home = tc_home                   , &
-                                      fixedCi = .false.                     & ! Toggle for fixing internal CO2 concentration, true = fixed, false = optimal ci
+                                      vcmax25   = out_pmodel%vcmax25        , &
+                                      jmax25    = out_pmodel%jmax25         , &
+                                      xi        = out_pmodel%xi             , &
+                                      tc_leaf   = temp_array(i)             , &
+                                      vpd       = climate%dvpd              , &
+                                      co2       = co2                       , &
+                                      fapar     = tile(lu)%canopy%fapar     , &
+                                      ppfd      = climate%dppfd  * 100      , & ! Experiment at light-saturation
+                                      patm      = climate%dpatm             , &
+                                      kphio     = kphio                     , &
+                                      tc_growth = temp_memory               , &
+                                      tc_home   = tc_home                   , &
+                                      fixedCi   = .true.                      & ! Toggle for fixing internal CO2 concentration, true = fixed, false = optimal ci
                                       )                                       
 
+        ! Original:
+        ! anet_array(i) = out_pmodel_inst_opt%anet
 
-        !TODO: Is this formulation for anet correct? 
-        ! Formula: A_net = min(Ac, Aj) * (1- gammastar/ci) - Rd
-
-        ! Formlulation for acclimated Rd25
-        ! anet_array(i) = ((out_pmodel_inst_opt%assim * (1 - (out_pmodel_inst_opt%gammastar / out_pmodel_inst_opt%ci))) * tile(lu)%plant(pft)%fpc_grid * tile(lu)%canopy%fapar * c_molmass * myinterface%params_siml%secs_per_tstep) - tile_fluxes(lu)%plant(pft)%drd
-
-        ! Formlulation for instant Rd25
-
-        anet_array(i) = out_pmodel_inst_opt%anet
+        ! TODO: For debugging:
+        anet_array(i)  = out_pmodel_inst_opt%anet
+        assim_array(i) = out_pmodel_inst_opt%assim
+        rd_array(i)    = out_pmodel_inst_opt%rd
+        dummy_array(i) = out_pmodel_inst_opt%term      
       
       end do
 
+      ! Get temperature at which a_net ix maximal:
       pos = maxloc(anet_array, 1)
 
       ! END OF Optimal Temperature !
@@ -303,12 +294,14 @@ contains
       !----------------------------!
       ! DEFINITION OF DEBUG OUTPUT !
       !----------------------------!
-      ! Flexible debugging variables
-      tile_fluxes(lu)%plant(pft)%debug1 = temp_memory ! tc_growth
-      tile_fluxes(lu)%plant(pft)%debug2 = temp_array(pos) ! tc_opt
-      tile_fluxes(lu)%plant(pft)%debug3 = 0
-      tile_fluxes(lu)%plant(pft)%debug4 = 0
 
+      tile_fluxes(lu)%plant(pft)%debug1 = temp_memory     ! tc_growth
+      tile_fluxes(lu)%plant(pft)%debug2 = temp_array(pos) ! tc_opt
+
+      tile_fluxes(lu)%plant(pft)%debug3 = kphio           ! Acclimated kphio
+      tile_fluxes(lu)%plant(pft)%debug4 = out_pmodel%dummy_out   ! Behavior of mc limitation
+      tile_fluxes(lu)%plant(pft)%debug5 = ppfd_memory
+      tile_fluxes(lu)%plant(pft)%debug6 = out_pmodel%chi               
       ! simple:
       if (nlu > 1) stop 'gpp: think about nlu > 1'
       lu = 1
@@ -737,7 +730,7 @@ contains
     params_gpp%rd_to_vcmax  = 0.01400000
 
     ! Apply identical temperature ramp parameter for all PFTs
-    params_gpp%tau_acclim     = 30.0                                     ! Original: 30.0
+    params_gpp%tau_acclim     = 15.0                                     ! Original: 30.0
     params_gpp%soilm_par_a    = myinterface%params_calib%soilm_par_a     ! is provided through standard input
     params_gpp%soilm_par_b    = myinterface%params_calib%soilm_par_b     ! is provided through standard input
 
