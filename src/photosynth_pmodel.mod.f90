@@ -44,6 +44,8 @@ module md_photosynth
     ! real :: actnv_unitfapar     ! Metabolic leaf N per unit fAPAR (g N m-2)
     ! real :: actnv_unitiabs      ! Metabolic leaf N per unit absorbed light (g N m-2 mol-1)
     ! real :: transp              ! Canopy-level total transpiration rate (g H2O (mol photons)-1)
+    real :: dummy_out                  ! TODO: clean-up after debugging
+
   end type outtype_pmodel
 
 
@@ -70,7 +72,7 @@ module md_photosynth
 
 contains
 
-  function pmodel( kphio, beta, ppfd, co2, tc, vpd, patm, tc_home, c4, method_optci, method_jmaxlim ) result( out_pmodel )
+  function pmodel( kphio, beta, ppfd, co2, tc_growth, vpd, patm, tc_home, c4, method_optci, method_jmaxlim ) result( out_pmodel )
     !//////////////////////////////////////////////////////////////////
     ! Implements the P-model, providing predictions for ci, Vcmax, and 
     ! light use efficiency, etc. 
@@ -83,7 +85,7 @@ contains
     ! real, intent(in) :: fapar        ! fraction of absorbed photosynthetically active radiation (unitless) 
     real, intent(in) :: ppfd         ! photosynthetic photon flux density (mol m-2 s-1), relevant for acclimated response
     real, intent(in) :: co2          ! atmospheric CO2 concentration (ppm), relevant for acclimated response
-    real, intent(in) :: tc           ! air temperature (deg C), relevant for acclimated response
+    real, intent(in) :: tc_growth    ! air temperature (deg C), relevant for acclimated response
     real, intent(in) :: vpd          ! vapor pressure (Pa), relevant for acclimated response
     real, intent(in) :: patm         ! atmospheric pressure (Pa), relevant for acclimated response
     real, intent(in) :: tc_home      ! home temperature for Jmax adaptation (deg C)
@@ -131,6 +133,7 @@ contains
     ! real :: actnv_unitiabs      ! Metabolic leaf N per unit absorbed light (g N m-2 mol-1)
     ! real :: transp              ! Canopy-level total transpiration rate (g H2O (mol photons)-1)
     real :: fact_jmaxlim        ! Jmax limitation factor (unitless)
+    real :: dummy_out                  ! TODO: clean-up after debugging
 
     ! local variables for Jmax limitation following Nick Smith's method
     real :: omega, omega_star, vcmax_unitiabs_star, tcref, jmax_over_vcmax, jmax_prime, jvrat
@@ -147,7 +150,7 @@ contains
     ca = co2_to_ca( co2, patm )
 
     ! photorespiratory compensation point - Gamma-star (Pa)
-    gammastar = calc_gammastar( tc, patm )
+    gammastar = calc_gammastar( tc_growth, patm )
 
     ! XXX PMODEL_TEST: ok
     ! print*,'tc        ', tc
@@ -156,13 +159,13 @@ contains
     ! print*,'gammastar ', gammastar
 
     ! Michaelis-Menten coef. (Pa)
-    kmm  = calc_kmm( tc, patm )
+    kmm  = calc_kmm( tc_growth, patm )
     
     ! ! XXX PMODEL_TEST: ok
     ! print*, 'kmm ', kmm
 
     ! viscosity correction factor = viscosity( temp, press )/viscosity( 25 degC, 1013.25 Pa) 
-    ns      = calc_viscosity_h2o( tc, patm )  ! Pa s 
+    ns      = calc_viscosity_h2o( tc_growth, patm )  ! Pa s 
     ns25    = calc_viscosity_h2o( 25.0, kPo )  ! Pa s 
     ns_star = ns / ns25                       ! (unitless)
 
@@ -267,10 +270,10 @@ contains
       
       ! tcref is the optimum temperature in K, assumed to be the temperature at which Vcmax* is operating. 
       ! tcref is estimated based on its relationship to growth temperature following Kattge & Knorr 2007
-      tcref = 0.44 * tc + 24.92
+      tcref = 0.44 * tc_growth + 24.92
 
       ! calculated acclimated Vcmax at prevailing growth temperatures
-      ftemp_inst_vcmax = calc_ftemp_inst_vcmax( tc, tc, tcref = tcref )
+      ftemp_inst_vcmax = calc_ftemp_inst_vcmax( tc_growth, tc_growth, tcref = tcref )
       vcmax = vcmax_star * ftemp_inst_vcmax   ! Eq. 20
       
       ! calculate Jmax
@@ -314,7 +317,7 @@ contains
     ! Corrolary preditions (This is prelimirary!)
     !-----------------------------------------------------------------------
     ! Vcmax25 (vcmax normalized to 25 deg C)
-    ftemp_inst_vcmax  = calc_ftemp_inst_vcmax( tc, tc, tcref = 25.0 )
+    ftemp_inst_vcmax  = calc_ftemp_inst_vcmax( tc_growth, tc_growth, tcref = 25.0 )
     vcmax25  = vcmax / ftemp_inst_vcmax
 
     ! ! Dark respiration at growth temperature
@@ -338,7 +341,7 @@ contains
         jmax = 4.0 * kphio * ppfd / sqrt( (1.0/fact_jmaxlim)**2 - 1.0 )
       end if
       ! for normalization using temperature response from Duursma et al., 2015, implemented in plantecophys R package
-      ftemp_inst_jmax  = calc_ftemp_inst_jmax( tc, tc, tc_home, tcref = 25.0 )
+      ftemp_inst_jmax  = calc_ftemp_inst_jmax( tc_growth, tc_growth, tc_home, tcref = 25.0 )
       jmax25  = jmax  / ftemp_inst_jmax
     end if
 
@@ -482,6 +485,7 @@ contains
     ! out_pmodel%gs_unitiabs      = gs_unitiabs
     ! out_pmodel%gs_unitfapar     = gs_unitfapar
     out_pmodel%gs_setpoint      = gs_setpoint
+    out_pmodel%dummy_out        = out_optchi%mjoc
 
   end function pmodel
 
@@ -846,13 +850,13 @@ contains
     !-------------------------
     ! Kumarathunge2019 Implementation:
     ! loal parameters
-    real, parameter :: Hd    = 200000 ! deactivation energy (J/mol)
-    real, parameter :: a_ent = 645.13 ! offset of entropy vs. temperature relationship (J/mol/K)
-    real, parameter :: b_ent = 0.38   ! slope of entropy vs. temperature relationship (J/mol/K^2)
+    real, parameter :: Hd    = 200000.0 ! deactivation energy (J/mol)
+    real, parameter :: a_ent = 645.13   ! offset of entropy vs. temperature relationship (J/mol/K)
+    real, parameter :: b_ent = 0.38     ! slope of entropy vs. temperature relationship (J/mol/K^2)
     
     ! local variables
     real :: tkref, tkleaf, dent, fva, fvb, mytcref, Ha
-    Ha = 42600 + 1.14 * tcgrowth ! Acclimation for vcmax
+    Ha = 42600 + 1140 * tcgrowth ! Acclimation for vcmax
 
     ! print*,'Kumarathunge vcmax, Ha:', Ha
     !-------------------------
@@ -861,7 +865,7 @@ contains
     if (present(tcref)) then
       mytcref = tcref
     else
-      mytcref = 25
+      mytcref = 25.0
     end if
 
     tkref = mytcref + 273.15  ! to Kelvin
@@ -921,11 +925,11 @@ contains
     !-------------------------
     ! Kumarathunge2019 Implementation:
     ! local parameters
-    real, parameter :: Ha    = 40710  ! activation energy (J/mol)
-    real, parameter :: Hd    = 200000 ! deactivation energy (J/mol)
-    real, parameter :: a_ent = 658.77 ! offset of entropy vs. temperature relationship (J/mol/K)
-    real, parameter :: b_ent = 0.84   ! slope of entropy vs. temperature relationship (J/mol/K^2)
-    real, parameter :: c_ent = 0.52   ! 2nd slope of entropy vs. temperature (J/mol/K^2)
+    real, parameter :: Ha    = 40710.0  ! activation energy (J/mol)
+    real, parameter :: Hd    = 200000.0 ! deactivation energy (J/mol)
+    real, parameter :: a_ent = 658.77   ! offset of entropy vs. temperature relationship (J/mol/K)
+    real, parameter :: b_ent = 0.84     ! slope of entropy vs. temperature relationship (J/mol/K^2)
+    real, parameter :: c_ent = 0.52     ! 2nd slope of entropy vs. temperature (J/mol/K^2)
     
     ! local variables
     real :: tkref, tkleaf, dent, fva, fvb, mytcref
@@ -948,7 +952,7 @@ contains
     fvb = (1.0 + exp( (tkref * dent - Hd)/(kR * tkref) ) ) / (1.0 + exp( (tkleaf * dent - Hd)/(kR * tkleaf) ) )
     fv  = fva * fvb
 
-  end function calc_ftemp_inst_jmax  
+  end function calc_ftemp_inst_jmax
 
 
   function calc_ftemp_arrhenius( tk, dha, tkref ) result( ftemp )
