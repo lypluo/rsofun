@@ -187,6 +187,9 @@ contains
 
     end if
 
+    ! xxx write restart file all info now in cohort_conserved_type, vegn_tile_conserved_type
+
+
     if (verbose) print*,'Done with biosphere for this year. Guete Rutsch!'
 
   end subroutine biosphere_annual

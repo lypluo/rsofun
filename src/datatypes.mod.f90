@@ -152,33 +152,14 @@ type spec_data_type
   ! branch fall processes.
 end type
 
-!----------cohort-----------------
-type :: cohort_type
-  ! ---- biological prognostic variables
-  integer :: ccID    = 0   ! cohort ID
-  integer :: species = 0   ! vegetation species
-  real    :: gdd     = 0.0   ! for phenology
-  integer :: status  = 0   ! growth status of plant: 1 for ON, 0 for OFF
-  integer :: layer   = 1   ! the layer of this cohort (numbered from top, top layer=1)
-  integer :: firstlayer = 0 ! 0 = never been in the first layer; 1 = at least one year in first layer
-  real    :: layerfrac  = 0.0 ! fraction of layer area occupied by this cohort
+!----------cohort type with conserved quantitites-----------------
+type :: cohort_conserved_type
 
-! for populatin structure
-  real    :: nindivs   = 1.0 ! density of vegetation, individuals/m2
-  real    :: age       = 0.0 ! age of cohort, years
-  real    :: Volume    = 0.0
-  real    :: dbh       = 0.0 ! diameter at breast height, m
-  real    :: height    = 0.0 ! vegetation height, m
-  real    :: crownarea = 1.0 ! crown area, m2/individual
-  real    :: leafarea  = 0.0 ! total area of leaves, m2/individual
-  real    :: lai       = 0.0 ! crown leaf area index, m2/m2
-! carbon pools
-  real    :: bl      = 0.0 ! biomass of leaves, kg C/individual
-  real    :: br      = 0.0 ! biomass of fine roots, kg C/individual
-  real    :: bsw     = 0.0 ! biomass of sapwood, kg C/individual
-  real    :: bHW     = 0.0 ! biomass of heartwood, kg C/individual
-  real    :: seedC   = 0.0 ! biomass put aside for future progeny, kg C/individual
-  real    :: nsc     = 0.0 ! non-structural carbon, kg C/individual
+end type cohort_conserved_type
+
+
+!----------cohort type with re-calculated quantitites-----------------
+type :: cohort_type
 
 ! ----- carbon fluxes
   real :: gpp  = 0.0 ! gross primary productivity kg C/timestep
@@ -241,7 +222,14 @@ type :: cohort_type
 
 end type cohort_type
 
-!---------------------------
+!-----------conserved variables----------------
+! contains quantities that are defined only at tile level (not cohort level), e.g. soil-related variables
+type :: vegn_tile_conserved_type
+xxx
+end type vegn_tile_conserved_type
+
+
+!-----------re-calculated variables----------------
 type :: vegn_tile_type
    integer :: n_cohorts = 0
    integer :: n_years   = 0
