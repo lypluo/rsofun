@@ -30,7 +30,6 @@ module md_interface_pmodel
     type(gridtype)                          :: grid
     real, dimension(4,nlayers_soil)         :: soiltexture   ! soil texture (rows: sand, clay, organic, gravel; columns: layers from top)
     real                                    :: whc_prescr
-    real                                    :: tc_home         ! home temperature for Jmax adaptation (deg C)
     type(climate_type), dimension(ndayyear) :: climate
     type(vegcover_type), dimension(ndayyear):: vegcover
     ! type(domaininfo_type)                 :: domaininfo
@@ -59,12 +58,8 @@ module md_interface_pmodel
     real, dimension(ndayyear) :: jmax25
     real, dimension(ndayyear) :: gs_accl
     real, dimension(ndayyear) :: wscal
-    real, dimension(ndayyear) :: debug1
-    real, dimension(ndayyear) :: debug2
-    real, dimension(ndayyear) :: debug3
-    real, dimension(ndayyear) :: debug4
-    real, dimension(ndayyear) :: debug5
-    real, dimension(ndayyear) :: debug6
+    real, dimension(ndayyear) :: chi
+    real, dimension(ndayyear) :: iwue
   end type outtype_biosphere
 
 end module md_interface_pmodel

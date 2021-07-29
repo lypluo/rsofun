@@ -35,7 +35,6 @@ contains
     latitude,                  &     
     altitude,                  &     
     whc,                       &
-    tc_home,                   &
     soiltexture,               &
     nt,                        &
     par,                       &
@@ -80,12 +79,11 @@ contains
     real(kind=c_double),  intent(in) :: latitude
     real(kind=c_double),  intent(in) :: altitude
     real(kind=c_double),  intent(in) :: whc
-    real(kind=c_double),  intent(in) :: tc_home
     real(kind=c_double),  dimension(4,nlayers_soil), intent(in) :: soiltexture   ! soil texture (rows: sand, clay, organic, gravel; columns: layers from top)
     integer(kind=c_int),  intent(in) :: nt ! number of time steps
     real(kind=c_double),  dimension(6), intent(in) :: par  ! free (calibratable) model parameters
     real(kind=c_double),  dimension(nt,13), intent(in) :: forcing  ! array containing all temporally varying forcing data (rows: time steps; columns: 1=air temperature, 2=rainfall, 3=vpd, 4=ppfd, 5=net radiation, 6=sunshine fraction, 7=snowfall, 8=co2, 9=N-deposition, 10=fapar) 
-    real(kind=c_double),  dimension(nt,17), intent(out) :: output
+    real(kind=c_double),  dimension(nt,13), intent(out) :: output
 
     ! local variables
     type(outtype_biosphere) :: out_biosphere  ! holds all the output used for calculating the cost or maximum likelihood function 
@@ -151,9 +149,6 @@ contains
     ! Overwrite whc
     myinterface%whc_prescr = real( whc )
 
-    ! home temperature
-    myinterface%tc_home = real( tc_home )
-
     !----------------------------------------------------------------
     ! GET CALIBRATABLE MODEL PARAMETERS (so far a small list)
     !----------------------------------------------------------------
@@ -188,8 +183,6 @@ contains
                                           myinterface%params_siml%in_netrad, &
                                           myinterface%grid%elv &
                                           )
-
-
 
       ! Get annual, gobally uniform CO2
       myinterface%pco2 = getco2(  nt, &
@@ -232,12 +225,8 @@ contains
         output(idx_start:idx_end,9)  = dble(out_biosphere%jmax25(:))
         output(idx_start:idx_end,10) = dble(out_biosphere%gs_accl(:))
         output(idx_start:idx_end,11) = dble(out_biosphere%wscal(:))
-        output(idx_start:idx_end,12) = dble(out_biosphere%debug1(:))
-        output(idx_start:idx_end,13) = dble(out_biosphere%debug2(:))
-        output(idx_start:idx_end,14) = dble(out_biosphere%debug3(:))
-        output(idx_start:idx_end,15) = dble(out_biosphere%debug4(:))
-        output(idx_start:idx_end,16) = dble(out_biosphere%debug5(:))
-        output(idx_start:idx_end,17) = dble(out_biosphere%debug6(:))
+        output(idx_start:idx_end,12) = dble(out_biosphere%chi(:))
+        output(idx_start:idx_end,13) = dble(out_biosphere%iwue(:))
 
       end if
 

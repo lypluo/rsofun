@@ -125,14 +125,8 @@ module md_tile_pmodel
     real :: vcmax             ! daily varying Vcmax (mol CO2 m-2 s-1)
     real :: jmax              ! daily varying Jmax (mol CO2 m-2 s-1)
     real :: gs_accl           ! acclimated stomatal conductance (xxx)
-
-    ! Flexible debugging output
-    real :: debug1
-    real :: debug2
-    real :: debug3
-    real :: debug4
-    real :: debug5
-    real :: debug6
+    real :: chi               ! ci:ca ratio (unitless)
+    real :: iwue              ! intrinsic water use efficiency (A/gs = ca*(1-chi))
 
     ! radiation
     real :: ppfd_splash
@@ -559,15 +553,8 @@ contains
       tile_fluxes(lu)%canopy%vcmax   = sum(tile_fluxes(lu)%plant(:)%vcmax   * tile(lu)%plant(:)%fpc_grid)
       tile_fluxes(lu)%canopy%jmax    = sum(tile_fluxes(lu)%plant(:)%jmax    * tile(lu)%plant(:)%fpc_grid)
       tile_fluxes(lu)%canopy%gs_accl = sum(tile_fluxes(lu)%plant(:)%gs_accl * tile(lu)%plant(:)%fpc_grid)
-      
-      ! Flexible debug output
-      tile_fluxes(lu)%canopy%debug1 = sum(tile_fluxes(lu)%plant(:)%debug1 * tile(lu)%plant(:)%fpc_grid)
-      tile_fluxes(lu)%canopy%debug2 = sum(tile_fluxes(lu)%plant(:)%debug2 * tile(lu)%plant(:)%fpc_grid)
-      tile_fluxes(lu)%canopy%debug3 = sum(tile_fluxes(lu)%plant(:)%debug3 * tile(lu)%plant(:)%fpc_grid)
-      tile_fluxes(lu)%canopy%debug4 = sum(tile_fluxes(lu)%plant(:)%debug4 * tile(lu)%plant(:)%fpc_grid)
-      tile_fluxes(lu)%canopy%debug5 = sum(tile_fluxes(lu)%plant(:)%debug5 * tile(lu)%plant(:)%fpc_grid)
-      tile_fluxes(lu)%canopy%debug6 = sum(tile_fluxes(lu)%plant(:)%debug6 * tile(lu)%plant(:)%fpc_grid)
-
+      tile_fluxes(lu)%canopy%chi     = sum(tile_fluxes(lu)%plant(:)%chi     * tile(lu)%plant(:)%fpc_grid)
+      tile_fluxes(lu)%canopy%iwue    = sum(tile_fluxes(lu)%plant(:)%iwue    * tile(lu)%plant(:)%fpc_grid)
     end do
 
     ! !----------------------------------------------------------------
@@ -582,7 +569,7 @@ contains
     ! tile_fluxes(lu)%canopy%avcmax25_mean = tile_fluxes(lu)%canopy%avcmax25_mean + tile_fluxes(lu)%canopy%vcmax25 * tile_fluxes(lu)%canopy%dgpp
 
     ! ! Annual maximum
-    ! if (tile_fluxes(lu)%canopy%vcmax25 > tile_fluxes(lu)%canopy%adiag_daily_max) tile_fluxes(lu)%canopy%avcmax25_max = tile_fluxes(lu)%canopy%vcmax25
+    ! if (tile_fluxes(lu)%canopy%vcmax25 > tile_fluxes(lu)%canopy%avcmax25_max) tile_fluxes(lu)%canopy%avcmax25_max = tile_fluxes(lu)%canopy%vcmax25
 
     ! !----------------------------------------------------------------
     ! ! PFT-level

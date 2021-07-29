@@ -31,44 +31,17 @@ load("~/data/rsofun_benchmarking/df_drivers_fluxnet2015.Rdata")
 
 There seem to be some leap year dates which create problems for rsofun. Drop Feb. 29 dates.
 ```{r}
-## New code for tc_home implementation:
-# Extract mean maximum temperature for all months
-df_tc_home <- ingest(
-    siteinfo_fluxnet2015,
-    source    = "worldclim",
-    settings  = list(varnam = c("tmax")),
-    dir       = "~/data/worldclim") %>%
-  
-  # Select mean maximum temperature of warmest month
-      unnest(cols = c(data)) %>%
-      rowwise() %>% 
-      mutate(tc_home = max(c_across(tmax_01:tmax_12))) %>% 
-      dplyr::select(!(starts_with("tmax")))
-
-# Attach tc_home to siteinfo in drivers
-df_drivers_fluxnet2015 <- df_drivers_fluxnet2015 %>%
-  
-  # Drop siteinfo
-  dplyr::select(!siteinfo) %>%
-  
-  # Update siteinfo with tc_home
-  left_join(df_drivers_fluxnet2015 %>% 
-              dplyr::select(sitename, siteinfo) %>% 
-              unnest(cols = c("siteinfo")) %>% 
-              left_join(df_tc_home) %>%
-              group_by(sitename) %>% 
-              nest() %>% 
-              rename(siteinfo = data)) %>% 
-  
-  # Drop leap years
+df_drivers_fluxnet2015 <- df_drivers_fluxnet2015 %>% 
   dplyr::select(sitename, forcing) %>% 
   unnest(forcing) %>% 
   dplyr::filter(!(month(date)==2 & mday(date)==29)) %>% 
   
-  # Scale flux to per seconds
-  mutate(prec = prec / (60*60*24), ppfd = ppfd / (60*60*24)) %>%
+  ## model requires flux per seconds now
+  mutate(prec = prec / (60*60*24), ppfd = ppfd / (60*60*24)) %>% 
+
+  ## model requires flux per seconds now
+  mutate(rainf = prec, snowf = 0) %>% 
     
-  # Create nested dataframe again
   group_by(sitename) %>% 
   nest() %>%
   rename(forcing = data) %>% 
@@ -78,24 +51,6 @@ df_drivers_fluxnet2015 <- df_drivers_fluxnet2015 %>%
     by = "sitename"
   ) %>% 
   ungroup()
-  
-## Below is original code
-# df_drivers_fluxnet2015 <- df_drivers_fluxnet2015 %>% 
-#   dplyr::select(sitename, forcing) %>% 
-#   unnest(forcing) %>% 
-#   dplyr::filter(!(month(date)==2 & mday(date)==29)) %>% 
-#   
-#   ## model requires flux per seconds now
-#   mutate(prec = prec / (60*60*24), ppfd = ppfd / (60*60*24)) %>%
-#   group_by(sitename) %>% 
-#   nest() %>%
-#   rename(forcing = data) %>% 
-#   right_join(
-#     df_drivers_fluxnet2015 %>% 
-#       dplyr::select(-forcing),
-#     by = "sitename"
-#   ) %>% 
-#   ungroup()
 ```
 
 ## Calibrate model
@@ -162,6 +117,10 @@ if (!file.exists(filn)){
 
 Calibrate the model.
 ```{r warning=FALSE, message=FALSE}
+## renaming necessary because of naming mess in different versions
+df_drivers_fluxnet2015 <- df_drivers_fluxnet2015 %>% 
+  mutate(forcing = purrr::map(forcing, ~rename(., rain = rainf, snow = snowf)))
+
 set.seed(1982)
 settings_calib <- calib_sofun(
   df_drivers = dplyr::filter(df_drivers_fluxnet2015, sitename %in% calibsites),  # use only one site
@@ -265,29 +224,3 @@ siteinfo_fluxnet2015 %>%
   dplyr::filter(sitename %in% evalsites) %>% 
   kable()
 ```
-
-### Save and Load working benchmark outputs
-```{r}
-# saveRDS(df_output, "~/data/mscthesis/rsofun/df_backup")
-# df_output <- readRDS("~/data/mscthesis/rsofun/df_backup")
-
-left_join(siteinfo_fluxnet2015, df_output %>% unnest()) %>% select(sitename, gs_accl, )
-left_join(df_drivers_fluxnet2015 %>% unnest(cols = "forcing"), df_output %>% unnest()) %>% dplyr::slice(sample(10))
-
-left_join(df_drivers_fluxnet2015 %>% unnest(cols = "forcing"), df_output %>% unnest()) 
-
-df_dr <- df_drivers_fluxnet2015 %>% unnest(cols = "forcing") %>% 
-  dplyr::select(sitename, date, temp) %>% 
-  mutate_at(vars(one_of(c("temp"))), rpmodel::dampen_vec, tau = 40) %>% 
-  rename(tgrowth = temp)
-
-test <- left_join(df_dr, df_output %>% unnest() %>% rename(topt = gs_accl) %>% mutate(topt = ifelse(topt < 5, NA, topt)) %>% drop_na())
-
-test <- left_join(df_dr, df_output %>% unnest() %>% rename(topt = gs_accl) %>% drop_na())
-
-test %>% ggplot() +
-  geom_smooth(aes(tgrowth, topt)) +
-  theme(legend.position = "none")  
-
-```
-

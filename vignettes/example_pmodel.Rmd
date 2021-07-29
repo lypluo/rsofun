@@ -42,31 +42,14 @@ This information is provided by the data frame `siteinfo_fluxnet2015` which is a
 
 ```{r}
 siteinfo <- ingestr::siteinfo_fluxnet2015 %>%
-  dplyr::filter(sitename %in% mysites) %>%
+  dplyr::filter(sitename %in% mysites) %>% 
 
   ## take only year 2007 to 2014, corresponding to subset of data for site FR-Pue provided in this package as demo
   dplyr::mutate(year_start = 2007, year_end = 2014) %>% 
 
   ## add info
   dplyr::mutate(date_start = lubridate::ymd(paste0(year_start, "-01-01"))) %>%
-  dplyr::mutate(date_end = lubridate::ymd(paste0(year_end, "-12-31"))) %>% 
-  
-  ## extracting home temperature from worldclim for mysites (mean maximal temperature of warmest month)
-  left_join(ingest(
-    dplyr::filter(ingestr::siteinfo_fluxnet2015, sitename %in% mysites),
-    source    = "worldclim",
-    settings  = list(varnam = c("tmax")),
-    dir       = "~/data/worldclim") %>%
-      
-      ## attach home temperature to data frame
-      unnest(cols = c(data), names_repair = "minimal") %>%
-      rowwise() %>% 
-      mutate(tc_home = max(c_across(tmax_01:tmax_12))) %>% 
-      dplyr::select(!(starts_with("tmax"))),
-    by = "sitename"
-  )
-
-## TODO - DONE: extract mean tmax of warmest month from worldclim for each site, see https://stineb.github.io/ingestr/articles/example.html#worldclim-3 -> new column in siteinfo data frame 'tc_home')
+  dplyr::mutate(date_end = lubridate::ymd(paste0(year_end, "-12-31")))
 ```
 
 ### Simulation settings
@@ -147,17 +130,14 @@ Now, meteorological forcing data and fAPAR data for each time step have to be co
 ```{r}
 df_drivers <- rsofun::df_drivers
 df_drivers
-
-## TODO - DONE: fudge df_drivers for this example
-df_drivers$siteinfo[[1]] <- df_drivers$siteinfo[[1]] %>% 
-  mutate(tc_home = siteinfo$tc_home)
 ```
 
 The units of fluxes have changed, but the object `df_drivers` has not been adjusted accordingly. Do it "by hand".
 
 ```{r}
 df_drivers$forcing[[1]]$prec <- rsofun::df_drivers$forcing[[1]]$prec / (60*60*24)
-df_drivers$forcing[[1]]$snowf <- 0
+df_drivers$forcing[[1]]$rain <- df_drivers$forcing[[1]]$prec
+df_drivers$forcing[[1]]$snow <- 0.0
 df_drivers$forcing[[1]]$ppfd <- rsofun::df_drivers$forcing[[1]]$ppfd / (60*60*24)
 ```
 
@@ -176,7 +156,6 @@ mod <- run_pmodel_f_bysite(
   params_modl = params_modl, 
   makecheck = TRUE 
   )
-
 ```
 
 Run for the full set of sites
