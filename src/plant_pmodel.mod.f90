@@ -85,8 +85,9 @@ module md_plant_pmodel
     real :: jmax25            ! acclimated Jmax, normalised to 25 deg C (mol CO2 m-2 s-1)
     real :: vcmax             ! daily varying Vcmax (mol CO2 m-2 s-1)
     real :: jmax              ! daily varying Jmax (mol CO2 m-2 s-1)
-    real :: gs_accl           ! acclimated stomatal conductance (xxx)
-    real :: chi               ! ci:ca ratio (unitless)
+    real :: gs_accl           ! acclimated stomatal conductance (mol CO2 m-2 s-1 Pa-1)
+    real :: topt              ! acclimated optimal temperature (degC)
+    real :: chi               ! Ratio of leaf-internal to ambient CO2 (unitless)
     real :: iwue              ! intrinsic water use efficiency (A/gs = ca*(1-chi))
 
     ! Flexible debugging variables
@@ -95,7 +96,6 @@ module md_plant_pmodel
     real :: debug3
     real :: debug4
     real :: debug5
-    real :: debug6
 
     ! ! annual variables
     ! real :: agpp             ! annual total gross primary production [gC/m2/yr]           

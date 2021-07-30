@@ -96,32 +96,32 @@ module md_photosynth_inst
       ! calc_ftemp_inst_vcmax( tcleaf, tcgrowth, tcref )
       ! calc_ftemp_inst_jmax( tcleaf, tcgrowth, tc_home, tcref )
 
-      vcmax = calc_ftemp_inst_vcmax(tc_leaf, tc_growth, tcref = 25.0 ) * vcmax25
+      vcmax = calc_ftemp_inst_vcmax(tc_leaf, tc_growth, tcref = 25.0 )         * vcmax25
       jmax  = calc_ftemp_inst_jmax(tc_leaf, tc_growth, tc_home, tcref = 25.0 ) * jmax25
-        
-      ! Instantaneous kphio - TODO: Not needed because kphio does not adapt on daily changes?
-      ! kphio = kphio * calc_ftemp_kphio()
         
       ! Aj, gs free
       L = 1.0 / sqrt(1.0 + ((4.0 * kphio * ppfd) / jmax)**2)
       kv = (ca - gammastar) / (1 + xi / sqrt(vpd))
       ci_j = ca - kv
 
-      ! If check for fixedCi
-      if (fixedCi) then
-          ci_j = 27.5 ! Corresponds to 275 ppm compared to ambient 10^6 Pa
+      if (fixedCi) then ! If check for fixedCi
+          ci_j = 27.5   ! Corresponds to 275 ppm compared to ambient 10^6 Pa
       end if
 
-      a_j = L * kphio * ppfd * (ci_j - gammastar)/(ci_j + 2 * gammastar)
+      a_j = L * kphio * ppfd * (ci_j / (ci_j + 2*gammastar)) * (1.0 - gammastar/ci_j)
+
+
+      if (.false.) then ! Taking Jmax limitation from Farquhar (1989) with a curvature parameter of 0.85
+        a_j = (kphio * ppfd + jmax - sqrt(( kphio * ppfd + jmax)**2 - (4*kphio*0.85*ppfd*jmax))) / (2*0.85) / 4 * (ci_c - gammastar)/(ci_c + kmm) * (1.0 - gammastar/ci_c) 
+      end if
+
       gs_j = a_j / kv
       
       ! Ac, gs free
       ci_c = ci_j
       a_c = vcmax * (ci_c - gammastar)/(ci_c + kmm)
       gs_c = a_j / kv
-        
-      ! TODO: rpmodel has unfinished tryout-code here for gs being not free
-        
+                
       ! Assimilation
       assim = min(a_j, a_c)
       ci = max(ci_c, ci_j)
@@ -131,7 +131,7 @@ module md_photosynth_inst
       rd = vcmax25 * rd_to_vcmax * calc_ftemp_inst_rd(tc_leaf)
 
       ! Net Assimilation
-      anet = assim * (1.0 - gammastar/ci) - rd
+      anet = assim - rd
 
       !--------------------------------!
       ! Definition of output           !

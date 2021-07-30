@@ -192,9 +192,10 @@ contains
         out_biosphere%vcmax25(doy) = tile_fluxes(1)%canopy%vcmax25
         out_biosphere%jmax25(doy)  = tile_fluxes(1)%canopy%jmax25
         out_biosphere%gs_accl(doy) = tile_fluxes(1)%canopy%gs_accl
-        out_biosphere%wscal(doy)   = tile(1)%soil%phy%wscal
+        out_biosphere%topt(doy)    = tile_fluxes(1)%canopy%topt
         out_biosphere%chi(doy)     = tile_fluxes(1)%canopy%chi
         out_biosphere%iwue(doy)    = tile_fluxes(1)%canopy%iwue
+        out_biosphere%wscal(doy)   = tile(1)%soil%phy%wscal
 
         ! Flexible debugging variables
         out_biosphere%debug1(doy)  = tile_fluxes(1)%canopy%debug1
@@ -202,7 +203,6 @@ contains
         out_biosphere%debug3(doy)  = tile_fluxes(1)%canopy%debug3
         out_biosphere%debug4(doy)  = tile_fluxes(1)%canopy%debug4
         out_biosphere%debug5(doy)  = tile_fluxes(1)%canopy%debug5
-        out_biosphere%debug6(doy)  = tile_fluxes(1)%canopy%debug6
 
         init_daily = .false.
 

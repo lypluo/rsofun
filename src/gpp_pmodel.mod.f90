@@ -67,7 +67,7 @@ module md_gpp_pmodel
 
 contains
 
-  subroutine gpp( tile, tile_fluxes, co2, climate, vegcover, grid, do_soilmstress, do_tempstress, init)
+  subroutine gpp( tile, tile_fluxes, co2, climate, vegcover, grid, do_soilmstress, do_tempstress, tc_home, init)
     !//////////////////////////////////////////////////////////////////
     ! Wrapper function to call to P-model. 
     ! Calculates meteorological conditions with memory based on daily
@@ -77,7 +77,8 @@ contains
     !------------------------------------------------------------------
     ! use md_plant, only: params_pft_plant, plant_type, plant_fluxes_type
     use md_sofunutils, only: dampen_variability
-    use md_photosynth, only: pmodel, zero_pmodel, outtype_pmodel, calc_ftemp_inst_vcmax, calc_ftemp_inst_jmax
+    use md_photosynth, only: pmodel, zero_pmodel, outtype_pmodel, calc_ftemp_inst_vcmax, calc_ftemp_inst_jmax, co2_to_ca, calc_gammastar, calc_kmm
+    use md_photosynth_inst, only: pmodel_inst, outtype_pmodel_inst
 
     ! arguments
     type(tile_type), dimension(nlu), intent(inout) :: tile
@@ -88,6 +89,7 @@ contains
     type(gridtype)      :: grid
     logical, intent(in) :: do_soilmstress                    ! whether empirical soil miosture stress function is applied to GPP
     logical, intent(in) :: do_tempstress                     ! whether empirical temperature stress function is applied to GPP
+    real, intent(in)    :: tc_home                           ! home temperature for Jmax adaptation (deg C)
     logical, intent(in) :: init                              ! is true on the very first simulation day (first subroutine call of each gridcell)
 
     ! ! input-output arguments
@@ -95,8 +97,7 @@ contains
     ! real, dimension(npft), intent(inout)  :: drd             ! daily total dark respiraiton (gC m-2 d-1)
     ! real, dimension(npft), intent(inout)  :: dtransp         ! daily total transpiration (XXX)
 
-    ! local variables
-    type(outtype_pmodel) :: out_pmodel              ! list of P-model output variables
+    ! local variables - simulations
     type(climate_type)   :: climate_acclimation     ! list of climate variables to which P-model calculates acclimated traits
     integer    :: pft
     integer    :: lu
@@ -111,8 +112,23 @@ contains
     real, save :: patm_memory
     real, save :: ppfd_memory
 
-    ! xxx test
-    real :: a_c, a_j, a_returned, fact_jmaxlim
+    ! local variables - pmodel
+    type(outtype_pmodel) :: out_pmodel               ! output of acclimated P-model
+    type(outtype_pmodel_inst) :: out_pmodel_inst     ! output of instantaneous P-model under ambient conditions
+    type(outtype_pmodel_inst) :: out_pmodel_inst_opt ! output of instantaneous P-model under optimal conditions
+
+    ! local variables - optimal temperature
+    integer :: i                                     ! looping variable
+    integer :: pos                                   ! variable to get position of optimal temperature
+    real, dimension(400) :: temp_array               ! array for leaf temperature
+    real, dimension(400) :: anet_array               ! array for net assimilation
+    real, dimension(400) :: assim_array              ! array for gross assimilation
+    real, dimension(400) :: rd_array                 ! array for dark respiration
+    real, dimension(400) :: dummy_array              ! array for debugging
+
+
+    ! xxx test TODO: Most of these variables can be removed because they were moved to the instant. pmodel module
+    real :: a_c, a_j, a_returned, fact_jmaxlim, ca, gammastar, kmm, rd_to_vcmax, L, kv, ci_j, ci_c, gs_j, gs_c, assim, ci, kphio, rd
 
     !----------------------------------------------------------------
     ! Convert daily mean environmental conditions to conditions to
@@ -154,6 +170,7 @@ contains
 
       ! take the slowly varying temperature for governing quantum yield variations
       ftemp_kphio = calc_ftemp_kphio( temp_memory, params_pft_plant(pft)%c4 )
+      kphio = params_pft_gpp(pft)%kphio * ftemp_kphio
 
       !----------------------------------------------------------------
       ! P-model call to get a list of variables that are 
@@ -161,39 +178,31 @@ contains
       !----------------------------------------------------------------
       if (tile(lu)%plant(pft)%fpc_grid > 0.0 .and. &      ! PFT is present
           grid%dayl > 0.0 .and.                    &      ! no arctic night
-          temp_memory > -5.0 ) then                      ! minimum temp threshold to avoid fpe
+          temp_memory > -5.0 ) then                       ! minimum temp threshold to avoid fpe
 
         !----------------------------------------------------------------
         ! With fAPAR = 1.0 (full light) for simulating Vcmax25
         !----------------------------------------------------------------
         ! print*,'kphio, ppfd_memory, co2_memory, temp_memory, vpd_memory, patm_memory ', params_pft_gpp(pft)%kphio * ftemp_kphio, ppfd_memory, co2_memory, temp_memory, vpd_memory, patm_memory 
 
+
+        !------------------------------!
+        ! Calling acclimated pmodel    !
+        !------------------------------!
+
         out_pmodel = pmodel(  &
-                              kphio          = params_pft_gpp(pft)%kphio * ftemp_kphio, &
+                              kphio          = kphio, &
                               beta           = params_gpp%beta, &
                               ppfd           = ppfd_memory, &
                               co2            = co2_memory, &
-                              tc             = temp_memory, &
+                              tc_growth      = temp_memory, &
                               vpd            = vpd_memory, &
                               patm           = patm_memory, &
+                              tc_home        = tc_home, &
                               c4             = params_pft_plant(pft)%c4, &
                               method_optci   = "prentice14", &
                               method_jmaxlim = "wang17" &
                               )
-
-        ! ! xxx test
-        ! out_pmodel = pmodel(  &
-        !                       kphio          = 5.16605116e-02, &
-        !                       beta           = params_gpp%beta, &
-        !                       ppfd           = 1.77466325E-04, &
-        !                       co2            = 369.548828, &
-        !                       tc             = 7.46864176, &
-        !                       vpd            = 433.062012, &
-        !                       patm           = 98229.4453, &
-        !                       c4             = params_pft_plant(pft)%c4, &
-        !                       method_optci   = "prentice14", &
-        !                       method_jmaxlim = "wang17" &
-        !                       )
 
       else
 
@@ -205,7 +214,7 @@ contains
       ! simple:
       if (nlu > 1) stop 'gpp: think about nlu > 1'
       lu = 1
-
+      
       !----------------------------------------------------------------
       ! Calculate soil moisture stress as a function of soil moisture, mean alpha and vegetation type (grass or not)
       !----------------------------------------------------------------
@@ -213,51 +222,147 @@ contains
         soilmstress = calc_soilmstress( tile(1)%soil%phy%wscal, 0.0, params_pft_plant(1)%grass )
       else
         soilmstress = 1.0
-      end if    
+      end if
 
-      !----------------------------------------------------------------
-      ! GPP
-      ! This still does a linear scaling of daily GPP - knowingly wrong
-      ! but not too dangerous...
-      !----------------------------------------------------------------
-      tile_fluxes(lu)%plant(pft)%dgpp = tile(lu)%plant(pft)%fpc_grid * tile(lu)%canopy%fapar * climate%dppfd * myinterface%params_siml%secs_per_tstep * out_pmodel%lue * soilmstress
-      
-      !! print*,'gpp',tile_fluxes(lu)%plant(pft)%dgpp
-      !! print*,'fpcgrid',tile(lu)%plant(pft)%fpc_grid
-      !! print*,'fapar',tile(lu)%canopy%fapar
-      !! print*,'ppfd', climate%dppfd
-      !! print*,'secspertstep', myinterface%params_siml%secs_per_tstep
-      !! print*,'lue', out_pmodel%lue
-      !! print*,'soilmstress', soilmstress
 
-      !----------------------------------------------------------------
-      ! Dark respiration
-      !----------------------------------------------------------------
-      tile_fluxes(lu)%plant(pft)%drd = tile(lu)%plant(pft)%fpc_grid * tile(lu)%canopy%fapar * out_pmodel%vcmax25 * calc_ftemp_inst_rd( climate%dtemp ) * c_molmass
 
-      !----------------------------------------------------------------
-      ! Vcmax and Jmax
-      !----------------------------------------------------------------
-      ! acclimated quantities
+      !------------------------------!
+      ! Calling instantaneous pmodel !
+      !------------------------------!
+
+      ! OPTION: Switch to PFT-Specific vcmax25: -> Careful with units! vcmax25 has to be in mol/m2/s
+      ! out_pmodel%vcmax25 = 80.4e-6
+
+      ! Acclimated variables
       tile_fluxes(lu)%plant(pft)%vcmax25 = out_pmodel%vcmax25
       tile_fluxes(lu)%plant(pft)%jmax25  = out_pmodel%jmax25
+      tile_fluxes(lu)%plant(pft)%gs_accl = out_pmodel%gs_setpoint
       tile_fluxes(lu)%plant(pft)%chi     = out_pmodel%chi
       tile_fluxes(lu)%plant(pft)%iwue    = out_pmodel%iwue
 
-      ! quantities with instantaneous temperature response
-      tile_fluxes(lu)%plant(pft)%vcmax = calc_ftemp_inst_vcmax( climate%dtemp, climate%dtemp, tcref = 25.0 ) * out_pmodel%vcmax25
-      tile_fluxes(lu)%plant(pft)%jmax  = calc_ftemp_inst_jmax(  climate%dtemp, climate%dtemp, tcref = 25.0 ) * out_pmodel%jmax25
 
-      !----------------------------------------------------------------
-      ! Stomatal conductance
-      !----------------------------------------------------------------
-      tile_fluxes(lu)%plant(pft)%gs_accl = out_pmodel%gs_setpoint
+      if (.true.) then
 
-    end do pftloop
+        out_pmodel_inst = pmodel_inst( &
+                                      vcmax25   = out_pmodel%vcmax25        , &
+                                      jmax25    = out_pmodel%jmax25         , &
+                                      xi        = out_pmodel%xi             , &
+                                      tc_leaf   = climate%dtemp             , &
+                                      vpd       = climate%dvpd              , &
+                                      co2       = co2                       , &
+                                      fapar     = tile(lu)%canopy%fapar     , &
+                                      ppfd      = climate%dppfd             , &
+                                      patm      = climate%dpatm             , &
+                                      kphio     = kphio                     , &
+                                      tc_growth = temp_memory               , &
+                                      tc_home   = tc_home                   , &
+                                      fixedCi   = .false.                     & ! Toggle for fixing internal CO2 concentration, true = fixed, false = optimal ci
+                                      )
+
+        ! Instantaneous variables
+        tile_fluxes(lu)%plant(pft)%vcmax = out_pmodel_inst%vcmax
+        tile_fluxes(lu)%plant(pft)%jmax  = out_pmodel_inst%jmax
+        tile_fluxes(lu)%plant(pft)%drd   = tile(lu)%plant(pft)%fpc_grid * tile(lu)%canopy%fapar * myinterface%params_siml%secs_per_tstep * out_pmodel_inst%rd
+        tile_fluxes(lu)%plant(pft)%dgpp  = tile(lu)%plant(pft)%fpc_grid * tile(lu)%canopy%fapar * c_molmass * myinterface%params_siml%secs_per_tstep * out_pmodel_inst%assim
+
+      end if
+
+      !--------------------------------!
+      ! Acclimated optimal temperature !
+      !--------------------------------!
+
+      do i =1,400
+
+        temp_array(i) = i / 10.0
+
+        out_pmodel_inst_opt = pmodel_inst( &
+                                      vcmax25   = out_pmodel%vcmax25        , &
+                                      jmax25    = out_pmodel%jmax25         , &
+                                      xi        = out_pmodel%xi             , &
+                                      tc_leaf   = temp_array(i)             , &
+                                      vpd       = climate%dvpd              , &
+                                      co2       = co2                       , &
+                                      fapar     = tile(lu)%canopy%fapar     , &
+                                      ppfd      = climate%dppfd * 100.0     , & ! Experiment at 1500 µmol m-2 s-1: Enter 0.00150
+                                      patm      = climate%dpatm             , &
+                                      kphio     = kphio                     , &
+                                      tc_growth = temp_memory               , &
+                                      tc_home   = tc_home                   , &
+                                      fixedCi   = .false.                     & ! Toggle for fixing internal CO2 concentration, true = fixed, false = optimal ci
+                                      )                                       
+
+        ! Original:
+        ! anet_array(i) = out_pmodel_inst_opt%anet
+
+        ! TODO: For debugging:
+        anet_array(i)  = out_pmodel_inst_opt%anet
+        assim_array(i) = out_pmodel_inst_opt%assim
+        rd_array(i)    = out_pmodel_inst_opt%rd
+        dummy_array(i) = out_pmodel_inst_opt%term      
+      
+      end do
+
+      ! Get temperature at which a_net ix maximal:
+      pos = maxloc(anet_array, 1)
+
+      ! Add optimal temperature to output:
+      tile_fluxes(lu)%plant(pft)%topt   = temp_array(pos) ! tc_opt
+
+
+      ! END OF Optimal Temperature !
+      !----------------------------!
+
+      !----------------------------!
+      ! DEFINITION OF DEBUG OUTPUT !
+      !----------------------------!
+
+      tile_fluxes(lu)%plant(pft)%debug1 = temp_memory     ! tc_growth
+      tile_fluxes(lu)%plant(pft)%debug2 = kphio           ! Acclimated kphio
+      tile_fluxes(lu)%plant(pft)%debug3 = out_pmodel%dummy_out   ! Behavior of mc limitation
+      tile_fluxes(lu)%plant(pft)%debug4 = params_gpp%tau_acclim
+      tile_fluxes(lu)%plant(pft)%debug5 = tile(lu)%plant(pft)%fpc_grid * tile(lu)%canopy%fapar * climate%dppfd * myinterface%params_siml%secs_per_tstep * out_pmodel%lue * soilmstress ! LUE GPP formulation
+
+    end do pftloop  
+
+
+    !  !----------------------------------------------------------------
+    !  ! ORIGINAL CODE for LUE model
+    !  !----------------------------------------------------------------
+    !  ! GPP
+    !  ! This still does a linear scaling of daily GPP - knowingly wrong
+    !  ! but not too dangerous...
+    !  !----------------------------------------------------------------
+    !  tile_fluxes(lu)%plant(pft)%dgpp = tile(lu)%plant(pft)%fpc_grid * tile(lu)%canopy%fapar * climate%dppfd * myinterface%params_siml%secs_per_tstep * out_pmodel%lue * soilmstress
+    !  ! print*,'gpp',tile_fluxes(lu)%plant(pft)%dgpp
+    !  ! print*,'fpcgrid',tile(lu)%plant(pft)%fpc_grid
+    !  ! print*,'fapar',tile(lu)%canopy%fapar
+    !  ! print*,'ppfd', climate%dppfd
+    !  ! print*,'secspertstep', myinterface%params_siml%secs_per_tstep
+    !  ! print*,'lue', out_pmodel%lue
+    !  ! print*,'soilmstress', soilmstress
+    !  !----------------------------------------------------------------
+    !  ! Dark respiration
+    !  !----------------------------------------------------------------
+    !  tile_fluxes(lu)%plant(pft)%drd = tile(lu)%plant(pft)%fpc_grid * tile(lu)%canopy%fapar * params_gpp%rd_to_vcmax * out_pmodel%vcmax25 * calc_ftemp_inst_rd( climate%dtemp ) * c_molmass
+    !  !----------------------------------------------------------------
+    !  ! Vcmax and Jmax
+    !  !----------------------------------------------------------------
+    !  ! acclimated quantities
+    !  tile_fluxes(lu)%plant(pft)%vcmax25 = out_pmodel%vcmax25
+    !  tile_fluxes(lu)%plant(pft)%jmax25  = out_pmodel%jmax25
+    !  ! quantities with instantaneous temperature response
+    !  tile_fluxes(lu)%plant(pft)%vcmax = calc_ftemp_inst_vcmax( climate%dtemp, climate%dtemp, tcref = 25.0 ) * out_pmodel%vcmax25
+    !  tile_fluxes(lu)%plant(pft)%jmax  = calc_ftemp_inst_jmax( climate%dtemp, climate%dtemp, tc_home, tcref = 25.0 ) * out_pmodel%jmax25
+    !  !----------------------------------------------------------------
+    !  ! Stomatal conductance
+    !  !----------------------------------------------------------------
+    !  tile_fluxes(lu)%plant(pft)%gs_accl = out_pmodel%gs_setpoint
 
   end subroutine gpp
 
-
+  ! -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------!
+  ! -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------!
+  ! -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------!
 
   ! function calc_dgpp( fapar, fpc_grid, dppfd, lue, ftemp_kphio, soilmstress ) result( my_dgpp )
   !   !//////////////////////////////////////////////////////////////////
@@ -517,7 +622,7 @@ contains
 
     fr = exp( apar * (tc - 25.0) - bpar * (tc**2 - 25.0**2) )
     
-  end function calc_ftemp_inst_rd  
+  end function calc_ftemp_inst_rd
 
 
   ! function calc_climate_acclimation( climate, grid, method ) result( climate_acclimation )
@@ -631,7 +736,7 @@ contains
     params_gpp%rd_to_vcmax  = 0.01400000
 
     ! Apply identical temperature ramp parameter for all PFTs
-    params_gpp%tau_acclim     = 30.0
+    params_gpp%tau_acclim     = 10.0                                     ! Original: 30.0
     params_gpp%soilm_par_a    = myinterface%params_calib%soilm_par_a     ! is provided through standard input
     params_gpp%soilm_par_b    = myinterface%params_calib%soilm_par_b     ! is provided through standard input
 
