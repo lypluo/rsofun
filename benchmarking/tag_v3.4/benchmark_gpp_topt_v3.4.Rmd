@@ -27,7 +27,7 @@ Benchmarking results are stored for individual model version numbers (git tags) 
 
 Load drivers data frame (created by `prepare_inputs_FLUXNET2015_ensemble.Rmd`).
 ```{r}
-load("~/data/rsofun_benchmarking/df_drivers_fluxnet2015.Rdata")
+load("~/data/rsofun_benchmarking/df_drivers_fluxnet2015_v3.4.Rdata")
 ```
 
 There seem to be some leap year dates which create problems for rsofun. Drop Feb. 29 dates.
@@ -41,7 +41,7 @@ df_drivers_fluxnet2015 <- df_drivers_fluxnet2015 %>%
   mutate(prec = prec / (60*60*24), ppfd = ppfd / (60*60*24)) %>% 
 
   ## model requires flux per seconds now
-  mutate(rainf = prec, snowf = 0) %>% 
+  mutate(rain = prec, snow = 0) %>% 
     
   group_by(sitename) %>% 
   nest() %>%
@@ -58,7 +58,7 @@ df_drivers_fluxnet2015 <- df_drivers_fluxnet2015 %>%
 
 Define calibration sites.
 ```{r}
-flue_sites <- readr::read_csv( "~/data/flue/flue_stocker18nphyt.csv" ) %>%
+flue_sites <- readr::read_csv( "~/data/flue/flue_stocker18nphyt.csv") %>%
               dplyr::filter( !is.na(cluster) ) %>% 
               distinct(site) %>% 
               pull(site)
@@ -98,7 +98,7 @@ settings_ingestr_fluxnet <- list(
   remove_neg = FALSE
   )
 
-filn <- "~/data/rsofun_benchmarking/ddf_fluxnet_gpp.Rdata"
+filn <- "~/data/rsofun_benchmarking/ddf_fluxnet_gpp_v3.4.Rdata"
 if (!file.exists(filn)){
   ddf_fluxnet_gpp <- ingestr::ingest(
     siteinfo = siteinfo_fluxnet2015 %>% 
@@ -118,10 +118,6 @@ if (!file.exists(filn)){
 
 Calibrate the model.
 ```{r warning=FALSE, message=FALSE}
-## renaming necessary because of naming mess in different versions
-df_drivers_fluxnet2015 <- df_drivers_fluxnet2015 %>% 
-  mutate(forcing = purrr::map(forcing, ~rename(., rain = rainf, snow = snowf)))
-
 set.seed(1982)
 settings_calib <- calib_sofun(
   df_drivers = dplyr::filter(df_drivers_fluxnet2015, sitename %in% calibsites),  # use only one site
@@ -173,7 +169,7 @@ evalsites <- df_output %>%
 
 Load standard benchmarking file with observational data for evaluation.
 ```{r}
-load("~/data/rsofun_benchmarking/obs_eval_fluxnet2015.Rdata")
+load("~/data/rsofun_benchmarking/obs_eval_fluxnet2015_v3.4.Rdata")
 ```
 
 
@@ -232,10 +228,11 @@ siteinfo_fluxnet2015 %>%
 
 ## Load data
 ```{r}
-load("~/data/rsofun_benchmarking/df_drivers_topt.Rdata")
+load("~/data/rsofun_benchmarking/df_drivers_topt_v3.4.Rdata")
 ```
 
-There seem to be some leap year dates which create problems for rsofun. Drop Feb. 29 dates.
+- There seem to be some leap year dates which create problems for rsofun. Drop Feb. 29 dates.
+
 ```{r}
 df_drivers_topt <- df_drivers_topt %>% 
   dplyr::select(sitename, forcing) %>% 
@@ -254,13 +251,13 @@ df_drivers_topt <- df_drivers_topt %>%
 
 
 ## Calibrate model
-This is done via Fluxnet only
+
+- This is done above via Fluxnet data.
 
 ## Run model
-```{r}
+```{r  warning=FALSE, message=FALSE, error=FALSE}
 df_output <- runread_pmodel_f(
-     df_drivers = df_drivers_topt %>%
-         mutate(forcing = purrr::map(forcing, ~rename(., rainf = rain, snowf = snow))), # TODO: Fix snowf/snow and rainf/rain naming issues
+     df_drivers = df_drivers_topt,
      params_modl = params_modl, 
      makecheck = TRUE,
      parallel = FALSE
@@ -272,7 +269,7 @@ df_output <- runread_pmodel_f(
 
 Load observed optimal temperature data
 ```{r}
-load("~/data/rsofun_benchmarking/obs_eval_topt.Rdata")
+load("~/data/rsofun_benchmarking/obs_eval_topt_v3.4.Rdata")
 ```
 
 ```{r}
@@ -285,7 +282,7 @@ df_topt_eval <- left_join(obs_eval_topt,
 
 
 ### Metrics
-```{r}
+```{r error=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 fit   <- lm(tc_opt_obs ~ tc_opt_sim, data = df_topt_eval)
 sry   <- summary(fit)
 r2    <- sry$adj.r.squared %>% round(2)
@@ -294,7 +291,11 @@ slope <- sry$coefficients[2, 1] %>% round(2)
 b0_sign <- sry$coefficients[1, 4] <= 0.05 # T = Intercept is signficantly different from 0
 b1_sign <- !(between(1, confint(fit, 'tc_opt_sim', level=0.95)[1] %>% round(2), confint(fit, 'tc_opt_sim', level=0.95)[2]) %>% round(2)) # T = Slope is significantly different from 1
 bias  <- mean(df_topt_eval$tc_opt_sim - df_topt_eval$tc_opt_obs) %>% round(2)
+```
 
+
+```{r error=FALSE, message=FALSE, warning=FALSE}
+lm(tc_opt_obs ~ tc_opt_sim, data = df_topt_eval) %>% summary()
 ```
 
 
