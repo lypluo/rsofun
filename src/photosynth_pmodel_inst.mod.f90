@@ -112,7 +112,7 @@ module md_photosynth_inst
 
 
       if (.false.) then ! Taking Jmax limitation from Farquhar (1989) with a curvature parameter of 0.85
-        a_j = (kphio * ppfd + jmax - sqrt(( kphio * ppfd + jmax)**2 - (4*kphio*0.85*ppfd*jmax))) / (2*0.85) / 4 * (ci_c - gammastar)/(ci_c + kmm) * (1.0 - gammastar/ci_c) 
+        a_j = (kphio * ppfd + jmax - sqrt(( kphio * ppfd + jmax)**2 - (4*kphio*0.85*ppfd*jmax))) / (2*0.85) / 4 * (ci_j / (ci_j + 2*gammastar)) * (1.0 - gammastar/ci_j)
       end if
 
       gs_j = a_j / kv

@@ -831,35 +831,41 @@ contains
     real, intent(in) :: tcgrowth
     real, intent(in), optional :: tcref
 
+    ! local variables
+    real :: tkref, tkleaf, dent, fva, fvb, mytcref, Ha, Hd, a_ent, b_ent
+
     ! function return variable
     real :: fv
 
-    ! ! -------------------------
-    ! ! Kattge2007 Implementation:
-    ! ! loal parameters
-    ! real, parameter :: Ha    = 71513  ! activation energy (J/mol)
-    ! real, parameter :: Hd    = 200000 ! deactivation energy (J/mol)
-    ! real, parameter :: a_ent = 668.39 ! offset of entropy vs. temperature relationship from Kattge & Knorr (2007) (J/mol/K)
-    ! real, parameter :: b_ent = 1.07   ! slope of entropy vs. temperature relationship from Kattge & Knorr (2007) (J/mol/K^2)
-    ! 
-    ! ! local variables
-    ! real :: tkref, tkleaf, dent, fva, fvb, mytcref
-    ! print*,'Kattge vcmax, Ha:', Ha
-    ! !-------------------------
+    if (.false.) then
 
-    !-------------------------
-    ! Kumarathunge2019 Implementation:
-    ! loal parameters
-    real, parameter :: Hd    = 200000.0 ! deactivation energy (J/mol)
-    real, parameter :: a_ent = 645.13   ! offset of entropy vs. temperature relationship (J/mol/K)
-    real, parameter :: b_ent = 0.38     ! slope of entropy vs. temperature relationship (J/mol/K^2)
-    
-    ! local variables
-    real :: tkref, tkleaf, dent, fva, fvb, mytcref, Ha
-    Ha = 42600 + 1140 * tcgrowth ! Acclimation for vcmax
+      ! -------------------------
+      ! Kattge2007 Implementation:
+      ! loal parameters
+      Ha    = 71513.0  ! activation energy (J/mol)
+      Hd    = 200000.0 ! deactivation energy (J/mol)
+      a_ent = 668.39 ! offset of entropy vs. temperature relationship from Kattge & Knorr (2007) (J/mol/K)
+      b_ent = 1.07   ! slope of entropy vs. temperature relationship from Kattge & Knorr (2007) (J/mol/K^2)
+      
+      ! print*,'Kattge vcmax, Ha:', Ha
+      ! !-------------------------
 
-    ! print*,'Kumarathunge vcmax, Ha:', Ha
-    !-------------------------
+    else
+
+      !-------------------------
+      ! Kumarathunge2019 Implementation:
+      ! loal parameters
+      Hd    = 200000.0 ! deactivation energy (J/mol)
+      a_ent = 645.13   ! offset of entropy vs. temperature relationship (J/mol/K)
+      b_ent = 0.38     ! slope of entropy vs. temperature relationship (J/mol/K^2)
+      
+      
+      Ha = 42600.0 + 1140.0 * tcgrowth ! Acclimation for vcmax
+
+      ! print*,'Kumarathunge vcmax, Ha:', Ha
+      !-------------------------
+
+    end if
 
 
     if (present(tcref)) then
@@ -903,41 +909,47 @@ contains
     real, intent(in), optional :: tc_home
     real, intent(in), optional :: tcref
 
+    ! local variables
+    real :: tkref, tkleaf, dent, fva, fvb, mytcref, a_ent, b_ent, c_ent, Ha, Hd
+
     ! function return variable
     real :: fv
 
-    ! !-------------------------
-    ! ! Kattge2007 Implementation:
-    ! ! local parameters
-    ! real, parameter :: Ha    = 49884  ! activation energy (J/mol)
-    ! real, parameter :: Hd    = 200000 ! deactivation energy (J/mol)
-    ! real, parameter :: a_ent = 659.70 ! offset of entropy vs. temperature relationship from Kattge & Knorr (2007) (J/mol/K)
-    ! real, parameter :: b_ent = 0.75   ! slope of entropy vs. temperature relationship from Kattge & Knorr (2007) (J/mol/K^2)
-    ! 
-    ! ! local variables
-    ! real :: tkref, tkleaf, dent, fva, fvb, mytcref
-    !
-    ! ! Entropy calculation, equations given in Celsius, not in Kelvin ('tcgrowth' corresponds to 'tmean' in Nicks, 'tc25' is 'to' in Nick's)
-    ! dent = a_ent - b_ent * tcgrowth
-    ! print*,'Kattge jmax, dent:', dent
-    ! !-------------------------
 
-    !-------------------------
-    ! Kumarathunge2019 Implementation:
-    ! local parameters
-    real, parameter :: Ha    = 40710.0  ! activation energy (J/mol)
-    real, parameter :: Hd    = 200000.0 ! deactivation energy (J/mol)
-    real, parameter :: a_ent = 658.77   ! offset of entropy vs. temperature relationship (J/mol/K)
-    real, parameter :: b_ent = 0.84     ! slope of entropy vs. temperature relationship (J/mol/K^2)
-    real, parameter :: c_ent = 0.52     ! 2nd slope of entropy vs. temperature (J/mol/K^2)
-    
-    ! local variables
-    real :: tkref, tkleaf, dent, fva, fvb, mytcref
+    if (.false.) then
+       
+      !-------------------------
+      ! Kattge2007 Implementation:
+      ! local parameters
+      Ha    = 49884.0  ! activation energy (J/mol)
+      Hd    = 200000.0 ! deactivation energy (J/mol)
+      a_ent = 659.70 ! offset of entropy vs. temperature relationship from Kattge & Knorr (2007) (J/mol/K)
+      b_ent = 0.75   ! slope of entropy vs. temperature relationship from Kattge & Knorr (2007) (J/mol/K^2)
+      
+      
+      ! Entropy calculation, equations given in Celsius, not in Kelvin ('tcgrowth' corresponds to 'tmean' in Nicks, 'tc25' is 'to' in Nick's)
+      dent = a_ent - b_ent * tcgrowth
+      ! print*,'Kattge jmax, dent:', dent
+      !-------------------------
 
-    ! Entropy calculation, equations given in Celsius, not in Kelvin
-    dent = a_ent - b_ent * tc_home - c_ent * (tcgrowth - tc_home)
-    ! print*,'Kumarathunge jmax, dent:', dent   
-    !-------------------------
+    else 
+
+      !-------------------------
+      ! Kumarathunge2019 Implementation:
+      ! local parameters
+      Ha    = 40710.0  ! activation energy (J/mol)
+      Hd    = 200000.0 ! deactivation energy (J/mol)
+      a_ent = 658.77   ! offset of entropy vs. temperature relationship (J/mol/K)
+      b_ent = 0.84     ! slope of entropy vs. temperature relationship (J/mol/K^2)
+      c_ent = 0.52     ! 2nd slope of entropy vs. temperature (J/mol/K^2)
+      
+
+      ! Entropy calculation, equations given in Celsius, not in Kelvin
+      dent = a_ent - b_ent * tc_home - c_ent * (tcgrowth - tc_home)
+      ! print*,'Kumarathunge jmax, dent:', dent   
+      !-------------------------
+
+    end if
 
     if (present(tcref)) then
       mytcref = tcref

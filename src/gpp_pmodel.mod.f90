@@ -264,6 +264,7 @@ contains
         tile_fluxes(lu)%plant(pft)%jmax  = out_pmodel_inst%jmax
         tile_fluxes(lu)%plant(pft)%drd   = tile(lu)%plant(pft)%fpc_grid * tile(lu)%canopy%fapar * myinterface%params_siml%secs_per_tstep * out_pmodel_inst%rd
         tile_fluxes(lu)%plant(pft)%dgpp  = tile(lu)%plant(pft)%fpc_grid * tile(lu)%canopy%fapar * c_molmass * myinterface%params_siml%secs_per_tstep * out_pmodel_inst%assim
+        ! tile_fluxes(lu)%plant(pft)%dgpp  = tile(lu)%plant(pft)%fpc_grid * tile(lu)%canopy%fapar * climate%dppfd * myinterface%params_siml%secs_per_tstep * out_pmodel%lue * soilmstress ! LUE GPP formulation (c_molmass already in photosynth.f90)
 
       end if
 
@@ -317,10 +318,10 @@ contains
       !----------------------------!
 
       tile_fluxes(lu)%plant(pft)%debug1 = temp_memory     ! tc_growth
-      tile_fluxes(lu)%plant(pft)%debug2 = kphio           ! Acclimated kphio
-      tile_fluxes(lu)%plant(pft)%debug3 = out_pmodel%dummy_out   ! Behavior of mc limitation
-      tile_fluxes(lu)%plant(pft)%debug4 = params_gpp%tau_acclim
-      tile_fluxes(lu)%plant(pft)%debug5 = tile(lu)%plant(pft)%fpc_grid * tile(lu)%canopy%fapar * climate%dppfd * myinterface%params_siml%secs_per_tstep * out_pmodel%lue * soilmstress ! LUE GPP formulation
+      tile_fluxes(lu)%plant(pft)%debug2 = ppfd_memory     ! ppfd_growth
+      tile_fluxes(lu)%plant(pft)%debug3 = out_pmodel%dummy_out   
+      tile_fluxes(lu)%plant(pft)%debug4 = tile(lu)%plant(pft)%fpc_grid * tile(lu)%canopy%fapar * c_molmass * myinterface%params_siml%secs_per_tstep * out_pmodel_inst%assim ! FvCB GPP formulation
+      tile_fluxes(lu)%plant(pft)%debug5 = tile(lu)%plant(pft)%fpc_grid * tile(lu)%canopy%fapar * climate%dppfd * myinterface%params_siml%secs_per_tstep * out_pmodel%lue * soilmstress ! LUE GPP formulation (c_molmass already in photosynth.f90)
 
     end do pftloop  
 
