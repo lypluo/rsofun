@@ -46,7 +46,7 @@ module md_photosynth_inst
       real, intent(in) :: fapar
       real, intent(in) :: ppfd
       real, intent(in) :: patm
-      real, intent(in) :: kphio
+      real :: kphio
       real, intent(in) :: tc_growth
       real, intent(in) :: tc_home
       logical, intent(in) :: fixedCi
@@ -93,14 +93,11 @@ module md_photosynth_inst
       kmm = calc_kmm(tc_leaf, patm)
         
       ! Instantaneous vcmax and jmax
-      ! calc_ftemp_inst_vcmax( tcleaf, tcgrowth, tcref )
-      ! calc_ftemp_inst_jmax( tcleaf, tcgrowth, tc_home, tcref )
-
-      vcmax = calc_ftemp_inst_vcmax(tc_leaf, tc_growth, tcref = 25.0 )         * vcmax25
-      jmax  = calc_ftemp_inst_jmax(tc_leaf, tc_growth, tc_home, tcref = 25.0 ) * jmax25
+      vcmax = calc_ftemp_inst_vcmax(tc_leaf, tc_growth, tcref = 25.0 )          * vcmax25
+      jmax  = calc_ftemp_inst_jmax( tc_leaf, tc_growth, tc_home, tcref = 25.0 ) * jmax25
         
       ! Aj, gs free
-      L = 1.0 / sqrt(1.0 + ((4.0 * kphio * ppfd) / jmax)**2)
+      L = 1.0 / sqrt(1.0 + ((4.0 * kphio * ppfd*fapar) / jmax)**2)
       kv = (ca - gammastar) / (1 + xi / sqrt(vpd))
       ci_j = ca - kv
 
@@ -108,11 +105,12 @@ module md_photosynth_inst
           ci_j = 27.5   ! Corresponds to 275 ppm compared to ambient 10^6 Pa
       end if
 
-      a_j = L * kphio * ppfd * (ci_j / (ci_j + 2*gammastar)) * (1.0 - gammastar/ci_j)
+      a_j = (4.0 * kphio * ppfd*fapar) / sqrt(1.0 + ((4.0 * kphio * ppfd*fapar)/(jmax))**2.0) / 4 * (ci_j / (ci_j + 2*gammastar)) * (1.0 - gammastar/ci_j)
 
 
       if (.false.) then ! Taking Jmax limitation from Farquhar (1989) with a curvature parameter of 0.85
-        a_j = (kphio * ppfd + jmax - sqrt(( kphio * ppfd + jmax)**2 - (4*kphio*0.85*ppfd*jmax))) / (2*0.85) / 4 * (ci_j / (ci_j + 2*gammastar)) * (1.0 - gammastar/ci_j)
+        kphio = kphio * 4.0
+        a_j = (kphio * ppfd*fapar + jmax - sqrt(( kphio * ppfd*fapar + jmax)**2.0 - (4.0*kphio*0.85*ppfd*fapar*jmax))) / (2.0*0.85) / 4 * (ci_j / (ci_j + 2.0*gammastar)) * (1.0 - gammastar/ci_j)
       end if
 
       gs_j = a_j / kv
@@ -143,10 +141,17 @@ module md_photosynth_inst
       out_pmodel_inst%gammastar  = gammastar
       out_pmodel_inst%ci    = ci
 
-      ! TODO: For debugging
+      ! TODO: For debugging purposes
+
+      if (assim==a_j) then
+        out_pmodel_inst%term  = 1
+      else
+        out_pmodel_inst%term  = 0
+      end if
+
       out_pmodel_inst%assim = assim
       out_pmodel_inst%rd    = rd
-      out_pmodel_inst%term  = (1.0 - gammastar/ci)
+      ! out_pmodel_inst%term  = (1.0 - gammastar/ci)
 
     end function pmodel_inst
 
