@@ -102,7 +102,6 @@ library(dplyr)
 library(tidyr)
 library(ggplot2)
 
-
 # the main model output-->for each site
 for (i in 1:nrow(output_subset)){
   sitename_run<-output_subset$sitename[i]
@@ -135,14 +134,16 @@ To optimize new parameters based upon driver data and a validation dataset we mu
  for (i in 1:nrow(output_subset)){
   #(1)prepare the data(model and EC based gpp)
   sitename_run<-output_subset$sitename[i]
-  model_drivers <- p_model_fluxnet_drivers_new %>%
+  model_drivers <- p_model_drivers_subset %>%
     filter(sitename==sitename_run)
-  # model_data <- output_subset %>%
-  #   filter(sitename==sitename_run)%>%
-  # tidyr::unnest(data)
-
+  
+  model_data_uncal<- output_subset %>%
+    filter(sitename==sitename_run)%>%
+  tidyr::unnest(data)
+  
   validation_data <- p_model_fluxnet_calval %>%
-  filter(sitename==sitename_run)
+  filter(sitename==sitename_run)%>%
+  tidyr::unnest(data)
   
   #(2)specify the optimization strategy:
   settings <- list(
@@ -150,7 +151,7 @@ To optimize new parameters based upon driver data and a validation dataset we mu
     targetvars          = c("gpp"),
     timescale           = list(targets_obs = "y"),
     sitenames           = sitename_run,
-    metric              = cost_rmse_kphio,
+    metric              = cost_rmse_photocold,
     dir_results         = "./",
     name                = "ORG",  #!!ask Koen if this corresponds to the Beni et al., 2020
     control = list(
@@ -176,24 +177,15 @@ To optimize new parameters based upon driver data and a validation dataset we mu
 # With all settings defined the optimization function `calib_sofun()` can be called with driver data and observations specified.
 
 #(3) calibrate the model and optimize free parameters
-pars <- calib_sofun(
-    drivers = model_drivers,  
+pars <- suppressWarnings(
+  calib_sofun(
+    drivers = model_drivers,
     obs = validation_data,
     settings = settings
+  )
 )
 
-}
-
-
-
-```
-
-```{r eval = FALSE}
-```
-
-When successful the optimized parameters can be used to run subsequent modelling efforts, in this case slightly improving the model fit over a more global parameter set.
-
-```{r}
+#(4)Run the model again with calibrated parametes
 # reformatting the parameter list
 params_modl <- list(
     kphio           = pars$par[1],
@@ -202,48 +194,32 @@ params_modl <- list(
     tau_acclim_tempstress = pars$par[4],
     par_shape_tempstress  = pars$par[5]
   )
-
 # run the model for these parameters
+#add by YP:here needs to always pay attention that: the arguments names in the r function should always correspond to the datasets
 output_new <- rsofun::runread_pmodel_f(
-  p_model_drivers,
-  par = params_modl
-  )
+  model_drivers,
+  par = params_modl)
 
-# we only have one site so we'll unnest
-# the main model output
-model_data_new <- output_new %>%
-  filter(sitename == "FR-Pue") %>%
+#(5)re-compare the modelling and observed data
+model_data_cal <- output_new %>%
+  filter(sitename == sitename_run) %>%
   tidyr::unnest(data)
 
-  ggplot() +
-    geom_line(
-    data = model_data,
-    aes(
-      date,
-      gpp
-    ),
-    colour = "blue",
-    alpha = 0.3
-  ) +
-  geom_line(
-    data = validation_data,
-    aes(
-      date,
-      gpp
-    )
-  ) +
-    geom_line(
-    data = model_data_new,
-    aes(
-      date,
-      gpp
-    ),
-    colour = "red"
-  ) +
-  labs(
-    x = "Date",
-    y = "GPP"
-  )
+#plot
+p_gpp<-ggplot() +
+    geom_line(data = model_data_uncal,
+    aes(date,gpp,col="uncalibrated modeled gpp")) +
+    geom_line(data = model_data_cal,
+    aes(date,gpp,col="calibrated modeled gpp"))+
+    geom_line(data = validation_data,
+    aes(date,gpp,col="EC gpp")) +
+    scale_color_manual("",values = c("uncalibrated modeled gpp"="tomato",
+    "calibrated modeled gpp" ="red4",
+    "EC gpp"="cyan2"))+
+    labs(x = "Date",y = "GPP(unit)")+
+    theme_classic()
+print(p_gpp)
+}
 
 ```
 

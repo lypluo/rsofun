@@ -422,8 +422,8 @@ cost_rmse_lm3ppa_gsleuning <- function(
                     df_mod$Biomass)
   ) %>%
     dplyr::left_join(obs, by = "variables") %>%
-    mutate(error = targets_mod - targets_obs) %>%
-    mutate(error_rel = error / targets_obs)
+    dplyr::mutate(error = targets_mod - targets_obs) %>%
+    dplyr::mutate(error_rel = error / targets_obs)
   
   ## Calculate cost (RMSE) across the N targets
   cost <- mean(dff$error_rel^2, na.rm = TRUE)
@@ -485,8 +485,8 @@ likelihood_lm3ppa <- function(
                     df_mod$Biomass)
   ) %>%
     dplyr::left_join(obs, by = "variables") %>%
-    mutate(error = targets_mod - targets_obs) %>%
-    mutate(error_rel = error / targets_obs)
+    dplyr::mutate(error = targets_mod - targets_obs) %>%
+    dplyr::mutate(error_rel = error / targets_obs)
   
   # singlelikelihood
   singlelikelihoods <- stats::dnorm(

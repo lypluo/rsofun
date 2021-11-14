@@ -30,9 +30,9 @@ calib_sofun <- function(
   settings
   ){
   
-  # drivers = p_model_drivers 
-  # obs = p_model_validation
-  # settings = settings
+  drivers = p_model_drivers
+  obs = p_model_validation
+  settings = settings
   
   # check input variables
   if(missing(obs) | missing(drivers) | missing(settings)){
